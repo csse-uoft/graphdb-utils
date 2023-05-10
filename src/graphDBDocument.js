@@ -13,10 +13,14 @@ class GraphDBDocument {
    * @param {{}} data
    * @param {GraphDBModel} model
    * @param {boolean} isNew
+   * @param {string} [uri]
    */
-  constructor({data, model, isNew = false}) {
+  constructor({data, model, isNew = false, uri}) {
     this.model = model;
     this.initialData = {...data};
+    this._internal = {
+      uri: uri
+    };
     // shallow copy arrays/objects
     for (const [key, value] of Object.entries(this.initialData)) {
       if (Array.isArray(value))
@@ -36,7 +40,7 @@ class GraphDBDocument {
 
     /**
      * Get the document's model schemaOptions.
-     * @type {GDSchemaOptions}
+     * @type {SchemaOptions}
      */
     this.schemaOptions = this.model.schemaOptions;
 
@@ -54,13 +58,28 @@ class GraphDBDocument {
   }
 
   /**
+   * Get the URI of the document.
+   * @returns {string}
+   */
+  get _uri() {
+    const defaultNS = SPARQL.getFullURI(":");
+    if (this._id) {
+      return `${defaultNS}${this.schemaOptions.name}_${this._id}`;
+    } else if (this._internal.uri) {
+      return this._internal.uri;
+    } else {
+      throw new Error("Should not reach here: Both doc._id and doc._internal.uri are unset.");
+    }
+  }
+
+  /**
    * Get the document data.
    * @return {{}}
    */
   get data() {
     const data = {...this};
     // Remove unwanted instance properties
-    ['model', 'initialData', 'isNew', 'modified', 'schema', 'schemaOptions'].forEach(name => delete data[name]);
+    ['model', 'initialData', 'isNew', 'modified', 'schema', 'schemaOptions', '_internal'].forEach(name => delete data[name]);
     return data;
   }
 
@@ -226,10 +245,26 @@ class GraphDBDocument {
     return this._id;
   }
 
+  async generateURI() {
+    // Both _id and uri is not provided, create a new URI with IDGenerator.
+    if (this._internal.uri) {
+      return this._internal.uri;
+    } else if (this._id == null && this._internal.uri == null) {
+      const [ns, name] = this.schemaOptions.name.split(":");
+      const fullNS = SPARQL.getFullURI(ns + ":");
+
+      this._id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
+      this._internal.uri = `${fullNS}${name}_${this._id}`;
+    } else if (this._internal.uri == null) {
+      throw new Error("uri is not provided.")
+    }
+    return this._internal.uri;
+  }
+
   async getQueries() {
-    const id = await this.generateId();
+    const uri = await this.generateURI();
     const data = this.cleanData(this.data);
-    const {header, footer, queryBody, innerQueryBodies, instanceName} = await this.model.generateCreationQuery(id, data);
+    const {header, footer, queryBody, innerQueryBodies, instanceName} = await this.model.generateCreationQuery(uri, data);
     const joinedQueryBody = innerQueryBodies.join('') + queryBody;
     const joinedQuery = header + joinedQueryBody + footer;
     return {queryBody: joinedQueryBody, instanceName, query: joinedQuery};

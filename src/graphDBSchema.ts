@@ -4,7 +4,7 @@ import {Types, defaultOptions, DeleteType, regexBuilder} from './helpers';
 
 const store: { [key: string]: GraphDBModel } = {};
 
-export type GraphDBModelConstructor = GraphDBModel & ((data: object) => GraphDBDocument);
+export type GraphDBModelConstructor = GraphDBModel & ((data: object, options?: object) => GraphDBDocument);
 export type GDBType = StringConstructor | NumberConstructor | DateConstructor | BooleanConstructor
   | 'owl:NamedIndividual' | 'GraphDB.Self!' | GraphDBModelConstructor;
 

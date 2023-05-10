@@ -32,7 +32,7 @@ class GraphDBModel {
    */
   instancePrefix2Model;
   /**
-   * @type {GDSchemaOptions}
+   * @type {SchemaOptions}
    */
   schemaOptions;
   /**
@@ -49,8 +49,8 @@ class GraphDBModel {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain
 
     // The constructor of GraphDBModel
-    function Model(data) {
-      return Model.createDocument(data);
+    function Model(...args) {
+      return Model.createDocument(...args);
     }
 
     // Inherit the GraphDBModel and assign values
@@ -64,10 +64,11 @@ class GraphDBModel {
    * Create a document based on the model.
    * Identical to `Model(data)`
    * @param {object} data - The data / properties in the new document
+   * @param {{uri?: string}} [options]
    * @return {GraphDBDocument}
    */
-  createDocument(data) {
-    return new GraphDBDocument({data, isNew: true, model: this});
+  createDocument(data, options) {
+    return new GraphDBDocument({data, isNew: true, model: this, uri: options?.uri});
   };
 
   /**
@@ -105,15 +106,15 @@ class GraphDBModel {
 
   /**
    * Generate creation query.
-   * @param {number|string} id
+   * @param {string} uri
    * @param data
    * @return {Promise<{footer: string, instanceName: string, innerQueryBodies: string[], header: string, queryBody: string}>}
    */
-  async generateCreationQuery(id, data) {
+  async generateCreationQuery(uri, data) {
     // Remove unwanted fields
     this.cleanData(data);
 
-    const instanceName = `${this.schemaOptions.name}_${id}`;
+    const instanceName = `<${uri}>`;
 
     const header = `${SPARQL.getSPARQLPrefixes()}\nINSERT DATA {\n`;
     const footer = '}\n';

@@ -42,7 +42,8 @@ export interface GraphDBUtilsConfig {
   // Used when creating a new repository
   repositoryConfig?: object;
   namespaces: { [key: string]: string };
-  idGenerator: IDGenerator
+  idGenerator: IDGenerator,
+  debug?: boolean;
 }
 
 

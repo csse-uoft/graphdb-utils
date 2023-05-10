@@ -1,6 +1,5 @@
 import {expect} from 'chai';
-import {GraphDB, createGraphDBModel, initGraphDB, GraphDBModelConstructor} from '../src';
-import {MongoDBIdGenerator} from "../src/idGenerator/mongoDBIdGenerator";
+import {GraphDB, createGraphDBModel, initGraphDB, MongoDBIdGenerator, GraphDBModelConstructor} from '../src';
 
 describe("GraphDB Basics", function () {
   let repository;
@@ -44,6 +43,15 @@ describe("GraphDB Basics", function () {
 
   it('should find all persons', async function () {
     const persons = await PersonModel.find({});
+  });
+
+  it('should create a document with uri', async function () {
+    const person1 = PersonModel({
+      familyName: 'last name',
+      givenName: 'first name',
+      gender: 'male'
+    }, {uri: "http://test/person/1"});
+    const person = await person1.save();
   });
 
 

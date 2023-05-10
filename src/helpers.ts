@@ -118,7 +118,7 @@ export const Helpers = {
     Types,
     DeleteType,
     defaultOptions,
-    stringToSpaces: (string: string) => string.replace(/[\w:_]/g, ' '),
+    stringToSpaces: (string: string) => string.replace(/./g, ' '),
     Comparison,
     regexBuilder,
     valToGraphDBValue: (val: any, type: GDBType) => {
