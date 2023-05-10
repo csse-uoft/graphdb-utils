@@ -51,7 +51,6 @@ export async function initGraphDB(config: GraphDBUtilsConfig) {
     config.address = config.address.slice(0, -1);
   }
   idGenerator = config.idGenerator;
-  console.log(idGenerator)
 
   const serverConfig = new ServerClientConfig(config.address);
 

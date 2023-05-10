@@ -5,6 +5,7 @@ import {MongoDBIdGenerator} from "../src/idGenerator/mongoDBIdGenerator";
 describe("GraphDB Basics", function () {
   let repository;
   it('should connect to GraphDB', async function () {
+    this.timeout(10000);
     const idGenerator = new MongoDBIdGenerator("mongodb://192.168.50.78:19345/gdb-utils");
     const namespaces = {
       "": "http://gdb-utils#",
