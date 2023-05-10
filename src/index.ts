@@ -7,3 +7,4 @@ export * from "./graphDBDocumentArray";
 export * from "./graphDBError"
 export * from "./namespaces";
 export * from "./helpers";
+export * from "./idGenerator";
