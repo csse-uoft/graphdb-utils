@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "build/index.js",
+  "types": "build/index.d.ts",
   "scripts": {
     "test": "echo \\\"Error: no tests specified\\\" && exit 1",
     "postinstall": "tsc --project tsconfig.json"
@@ -13,7 +14,6 @@
   },
   "author": "Lester Lyu",
   "license": "MIT",
-  "types": "./src/index.d.ts",
   "bugs": {
     "url": "https://github.com/csse-uoft/graphdb-utils/issues"
   },
