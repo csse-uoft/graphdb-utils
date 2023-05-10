@@ -5,7 +5,8 @@
   "main": "build/index.js",
   "scripts": {
     "test": "echo \\\"Error: no tests specified\\\" && exit 1",
-    "postinstall": "tsc --project tsconfig.json"
+    "tsc": "tsc --project tsconfig.json",
+    "postinstall": "npm run tsc"
   },
   "repository": {
     "type": "git",
