@@ -5,8 +5,9 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
-    "test": "echo \\\"Error: no tests specified\\\" && exit 1",
-    "postinstall": "tsc --project tsconfig.json"
+    "test": "mocha tests/index.ts --require ts-node/register --exit",
+    "postinstall": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json"
   },
   "repository": {
     "type": "git",
@@ -30,7 +31,11 @@
     "@types/chai": "^4.3.5",
     "@types/mocha": "^10.0.1",
     "chai": "^4.3.7",
+    "dotenv": "^16.0.3",
     "mocha": "^10.2.0",
     "ts-node": "^10.9.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }

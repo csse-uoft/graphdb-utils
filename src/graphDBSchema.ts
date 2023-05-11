@@ -1,10 +1,15 @@
 import {GraphDBDocument} from './graphDBDocument';
 import {GraphDBModel} from './graphDBModel';
-import {Types, defaultOptions, DeleteType, regexBuilder} from './helpers';
+import {Types, defaultOptions, DeleteType, regexBuilder, SPARQL} from './helpers';
 
 const store: { [key: string]: GraphDBModel } = {};
 
-export type GraphDBModelConstructor = GraphDBModel & ((data: object, options?: object) => GraphDBDocument);
+export type GDBBaseValueType = string | number | Date | boolean | object | GraphDBDocument
+  | (string | number | Date | boolean | object | GraphDBDocument)[];
+
+export type GraphDBModelConstructor =
+  GraphDBModel
+  & ((data: object, options?: object) => GraphDBDocument & { [key: string]: GDBBaseValueType });
 export type GDBType = StringConstructor | NumberConstructor | DateConstructor | BooleanConstructor
   | 'owl:NamedIndividual' | 'GraphDB.Self!' | GraphDBModelConstructor;
 
@@ -51,7 +56,7 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
   const internalKey2Option = new Map();
 
   // nested model information
-  const instancePrefix2Model = new Map();
+  const nestedType2Model = new Map();
 
   // if type.schemaOptions.name does not contain prefix, default to empty prefix `:`
   if (!schemaOptions.name.includes(':')) {
@@ -66,7 +71,7 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
       options = {...defaultOptions, ...options};
     }
 
-    const internalKey = options.internalKey || `${options.prefix}${key}`;
+    const internalKey = options.internalKey || `:${options.prefix}${key}`;
     const externalKey = options.externalKey || (Array.isArray(options.type) ? `${key}` : key);
 
     options = {...options, internalKey, externalKey, schemaKey: key};
@@ -84,10 +89,17 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
       } else {
         nestedModel = options.type as GraphDBModel;
       }
-      instancePrefix2Model.set(nestedModel.schemaOptions.name, nestedModel);
-      for (const [innerKey, innerVal] of nestedModel.instancePrefix2Model.entries()) {
-        instancePrefix2Model.set(innerKey, innerVal);
+      for (const nestedRdfType of nestedModel.schemaOptions.rdfTypes) {
+        if (nestedRdfType === Types.NamedIndividual || nestedRdfType === SPARQL.getFullURI(Types.NamedIndividual)) continue;
+        if (nestedRdfType.includes("://"))
+          nestedType2Model.set(nestedRdfType, nestedModel);
+        else
+          nestedType2Model.set(SPARQL.getFullURI(nestedRdfType), nestedModel);
       }
+      for (const [innerKey, innerVal] of nestedModel.nestedType2Model.entries()) {
+        nestedType2Model.set(innerKey, innerVal);
+      }
+
     }
   }
 
@@ -96,7 +108,7 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
     schemaOptions.rdfTypes.unshift(Types.NamedIndividual);
   }
   const model = GraphDBModel.init({
-    externalKey2Option, internalKey2Option, instancePrefix2Model, schemaOptions, schema
+    externalKey2Option, internalKey2Option, nestedType2Model, schemaOptions, schema
   });
   // Store it internally
   store[schemaOptions.name] = model;

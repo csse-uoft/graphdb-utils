@@ -1,11 +1,14 @@
 import {expect} from 'chai';
-import {GraphDB, createGraphDBModel, initGraphDB, MongoDBIdGenerator, GraphDBModelConstructor} from '../src';
+import dotenv from 'dotenv';
+import {createGraphDBModel, DeleteType, GraphDBModelConstructor, initGraphDB, MongoDBIdGenerator} from '../src';
+
+dotenv.config({path: `${__dirname}/.env`});
 
 describe("GraphDB Basics", function () {
   let repository;
   it('should connect to GraphDB', async function () {
     this.timeout(10000);
-    const idGenerator = new MongoDBIdGenerator("mongodb://192.168.50.78:19345/gdb-utils");
+    const idGenerator = new MongoDBIdGenerator(process.env.MONGODB || "mongodb://127.0.0.1:27017/gdb-utils");
     const namespaces = {
       "": "http://gdb-utils#",
       'cids': 'http://ontology.eil.utoronto.ca/cids/cids#',
@@ -15,7 +18,7 @@ describe("GraphDB Basics", function () {
 
     const result = await initGraphDB({
       idGenerator,
-      address: "http://192.168.50.111:7200",
+      address: process.env.GRAPHDB || "http://127.0.0.1:7200",
       namespaces,
       repositoryName: 'gdb-utils',
     });
@@ -32,17 +35,28 @@ describe("GraphDB Basics", function () {
     );
   });
 
-  it('should create a document', async function () {
+  it('should cleanup person instances', async function () {
+    await PersonModel.findAndDelete({});
+  })
+
+  it('should create documents', async function () {
     const person1 = PersonModel({
       familyName: 'last name',
       givenName: 'first name',
       gender: 'male'
     });
-    const person = await person1.save();
+    const person2 = PersonModel({
+      familyName: 'last name',
+      givenName: 'first name',
+      gender: 'male'
+    });
+    await person1.save();
+    await person2.save();
   });
 
   it('should find all persons', async function () {
     const persons = await PersonModel.find({});
+    expect(persons).has.length(2);
   });
 
   it('should create a document with uri', async function () {
@@ -51,8 +65,110 @@ describe("GraphDB Basics", function () {
       givenName: 'first name',
       gender: 'male'
     }, {uri: "http://test/person/1"});
-    const person = await person1.save();
+    await person1.save();
   });
 
+  it('should modify a document with uri', async function () {
+    const person2 = PersonModel({
+      familyName: 'last name',
+      givenName: 'first name',
+      gender: 'male'
+    }, {uri: "http://test/person/2"});
+    await person2.save();
+    person2.givenName = "new given name";
+    await person2.save();
+    const foundPerson2 = await PersonModel.find({_uri: "http://test/person/2"});
+    expect(foundPerson2.length === 0);
+    expect(foundPerson2[0].givenName).eq("new given name");
+  });
 
+  it('should delete single person', async function () {
+    const people = await PersonModel.find({});
+    const peopleWithId = people.filter(person => person._id);
+    const peopleWithUri = people.filter(person => !person._id);
+
+    const deletedDocs = await PersonModel.findAndDelete({_uri: peopleWithUri[0]._uri});
+    expect(deletedDocs).has.length(1);
+    expect(await PersonModel.find({})).has.length(people.length - 1);
+
+    const deletedDocs2 = await PersonModel.findAndDelete({_uri: peopleWithId[0]._uri});
+    expect(deletedDocs).has.length(1);
+    expect(await PersonModel.find({})).has.length(people.length - 2);
+
+    const deletedDocs3 = await PersonModel.findAndDelete({_id: peopleWithId[1]._id});
+    expect(deletedDocs).has.length(1);
+    expect(await PersonModel.find({})).has.length(people.length - 3);
+
+  });
+
+  it('should delete all person', async function () {
+    await PersonModel.findAndDelete({});
+    expect(await PersonModel.find({})).length(0);
+  });
+
+  let AccountModel: GraphDBModelConstructor;
+  it('should populate nested document', async function () {
+    AccountModel = createGraphDBModel({
+      person: {type: PersonModel, onDelete: DeleteType.CASCADE},
+      username: String,
+    }, {rdfTypes: [":Account"], name: 'account'});
+
+    const account = AccountModel({
+      person: {
+        familyName: 'last name',
+        givenName: 'first name',
+        gender: 'male'
+      },
+      username: 'test'
+    });
+    await account.save();
+    const accounts = await AccountModel.find({}, {populates: ['person']});
+    expect(accounts).length.gt(0);
+    expect(accounts[0]).property('person');
+    expect(accounts[0].person).property('familyName').eq('last name');
+  });
+
+  it('should populate nested document with account uri', async function () {
+    const accountUri = 'http://test/account/1';
+    const account = AccountModel({
+      person: {
+        familyName: 'last name',
+        givenName: 'first name',
+        gender: 'male'
+      },
+      username: 'test2'
+    }, {uri: accountUri});
+    await account.save();
+    const accounts = await AccountModel.find({_uri: accountUri}, {populates: ['person']});
+    expect(accounts).length.gt(0);
+    expect(accounts[0].username).eq('test2');
+    expect(accounts[0]).property('person');
+    expect(accounts[0].person).property('familyName').eq('last name');
+  });
+
+  it('should populate nested document with account uri + person uri', async function () {
+    const accountUri = 'http://test/account/2';
+    const personUri = 'http://test/person/2';
+
+    const account = AccountModel({
+      person: PersonModel({
+        familyName: 'last name',
+        givenName: 'first name',
+        gender: 'male'
+      }, {uri: personUri}),
+      username: 'test3'
+    }, {uri: accountUri});
+    await account.save();
+    const accounts = await AccountModel.find({_uri: accountUri}, {populates: ['person']});
+    expect(accounts).length.gt(0);
+    expect(accounts[0].username).eq('test3');
+    expect(accounts[0]).property('person');
+    expect(accounts[0].person._uri).eq(personUri);
+  });
+
+  it('should delete all accounts with users', async function () {
+    await AccountModel.findAndDelete({});
+    expect(await AccountModel.find({})).length(0);
+    expect(await PersonModel.find({})).length(0);
+  });
 });

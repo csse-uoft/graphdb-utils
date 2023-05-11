@@ -28,9 +28,9 @@ class GraphDBModel {
    */
   internalKey2Option;
   /**
-   * @type {Map}
+   * @type {Map<string, GraphDBModel>}
    */
-  instancePrefix2Model;
+  nestedType2Model;
   /**
    * @type {SchemaOptions}
    */
@@ -245,6 +245,22 @@ class GraphDBModel {
       whereClause.push(`FILTER(${filterStr})`);
     }
 
+    // If filter._uri is provided, constraints document ids
+    if (filter._uri) {
+      let uris;
+      if (typeof filter._uri === "object" && Array.isArray(filter._uri.$in)) {
+        uris = filter._id.$in;
+      } else if (typeof filter._uri === "string") {
+        uris = [filter._uri];
+      } else {
+        throw new Error('Model.find: filter._uri supports only {$in: string[]}, or string.')
+      }
+      const filterStr = uris.map(uri =>
+        `${subject} = <${uri}>`
+      ).join(' || ');
+      whereClause.push(`FILTER(${filterStr})`);
+    }
+
     for (const [index, [key, val]] of Object.entries(filter).entries()) {
       // skip undefined/null value
       if (val == null) continue;
@@ -319,7 +335,7 @@ class GraphDBModel {
           whereClause.push(`FILTER(${object} = ${valToGraphDBValue(val, options.type)})`);
         }
 
-      } else if (key !== '_id') {
+      } else if (key !== '_id' && key !== '_uri') {
         console.warn(`Ignoring key ${key} since it is not defined in the schema.`)
       }
     }
@@ -339,7 +355,7 @@ class GraphDBModel {
    * @return {{query: string, where: string[]}}
    */
   generateDeleteQuery(doc, cnt = 0) {
-    const subject = `${this.schemaOptions.name}_${doc._id}`;
+    const subject = `<${doc._uri}>`;
     const where = [`${subject} ?p_${cnt} ?o_${cnt}.`];
 
     for (const path of this.getCascadePaths()) {
@@ -375,7 +391,7 @@ class GraphDBModel {
    * Find documents from the model.
    * @param {{}} filter
    * @param {{populates}} options
-   * @return {Promise.<GraphDBDocumentArray>}
+   * @return {Promise.<GraphDBDocumentArray>} The found documents.
    * @memberOf {GraphDBModel}
    * @example
    * ```js
@@ -403,6 +419,17 @@ class GraphDBModel {
    *      'organization.primary_contact'  // Populate organization and organization.primary_contact
    *    ]
    * });
+   *
+   * // Find all clients where the characteristic_14 contains 'le' and characteristic_15='lyu'
+   * await GDBClientModel.find({
+   *   characteristicOccurrences: {
+   *     $and: [
+   *       {occurrenceOf: ":characteristic_14", dataStringValue: 'lester'},
+   *       {occurrenceOf: ":characteristic_15", dataStringValue: 'lyu'}
+   *     ]
+   *   }
+   * });
+   *
    * ```
    */
   async find(filter, options = {}) {
@@ -411,37 +438,79 @@ class GraphDBModel {
 
     const data = {};
     const resultInArray = new GraphDBDocumentArray();
+
+    /**
+     * @type {Map<string, Map<string, Term[]>>}
+     */
+    const subject2Triples = new Map();
+    /**
+     * @type {Map<string, string[]>}
+     */
+    const rdfType2Subjects = new Map();
+
     await GraphDB.sendConstructQuery(query, ({subject, predicate, object}) => {
-      subject = SPARQL.getPrefixedURI(subject.value);
+
+      subject = subject.value;
       predicate = SPARQL.getPrefixedURI(predicate.value);
-      object = object.termType === 'NamedNode' ? SPARQL.getPrefixedURI(object.value) : object.value;
+      const objectValue = object.termType === 'NamedNode' ? object.value : object.value;
 
-      // The top instance
-      if (subject.startsWith(this.schemaOptions.name)) {
-        const option = this.internalKey2Option.get(predicate);
-        // ignore unknown predicates
-        if (!option)
-          return;
-        object = graphDBValueToJsValue(object, Array.isArray(option.type) ? option.type[0] : option.type);
-        predicate = option.externalKey;
-
-        const id = subject.slice(subject.lastIndexOf('_') + 1);
-        if (!data[id]) data[id] = {};
-        if (Array.isArray(option.type)) {
-          if (!data[id][predicate]) data[id][predicate] = [];
-          data[id][predicate].push(object);
+      if (predicate === "rdf:type" && object.termType === 'NamedNode' && object.value !== 'http://www.w3.org/2002/07/owl#NamedIndividual') {
+        if (rdfType2Subjects.has(object.value)) {
+          rdfType2Subjects.get(object.value).push(subject);
         } else {
-          data[id][predicate] = object;
+          rdfType2Subjects.set(object.value, [subject]);
+        }
+      }
+
+      if (!subject2Triples.has(subject)) {
+        subject2Triples.set(subject, new Map([[predicate, [objectValue]]]));
+      } else {
+        if (!subject2Triples.get(subject).has(predicate)) {
+          subject2Triples.get(subject).set(predicate, [objectValue]);
+        } else {
+          subject2Triples.get(subject).get(predicate).push(objectValue);
         }
       }
     });
 
+    // construct data object: uri -> {predicate: value, ...}
+    const topInstanceType = this.schemaOptions.rdfTypes.filter(type => type !== 'owl:NamedIndividual')[0];
+    const topInstances = rdfType2Subjects.get(SPARQL.getFullURI(topInstanceType)) || [];
+    for (const subject of topInstances) {
+      for (const [predicate, objects] of subject2Triples.get(subject) || []) {
+        const option = this.internalKey2Option.get(predicate);
+        // ignore unknown predicates
+        if (!option) continue;
+
+        for (const object of objects || []) {
+          const objectJS = graphDBValueToJsValue(object, Array.isArray(option.type) ? option.type[0] : option.type);
+          const predicateJS = option.externalKey;
+
+          if (!data[subject]) data[subject] = {};
+          if (Array.isArray(option.type)) {
+            if (!data[subject][predicateJS]) data[subject][predicateJS] = [];
+            data[subject][predicateJS].push(objectJS);
+          } else {
+            data[subject][predicateJS] = objectJS;
+          }
+        }
+      }
+    }
+
     const paths = objToPath(populates);
 
-    for (const [id, topInstance] of Object.entries(data)) {
+    for (const [uri, topInstance] of Object.entries(data)) {
+      let _id;
+      // use regex for accurate matching
+      const re = new RegExp(`^${SPARQL.getFullURI(this.schemaOptions.name)}_([0-9]*)$`);
+      const matchResult = uri.match(re);
+      if (matchResult) {
+        _id = matchResult[1];
+      }
       const doc = new GraphDBDocument({
-        data: {_id: id, ...topInstance},
-        model: this
+        data: _id ? {_id, ...topInstance} : {...topInstance},
+        model: this,
+        uri,
       });
       resultInArray.push(doc);
     }
@@ -453,7 +522,7 @@ class GraphDBModel {
   }
 
   /**
-   * Find an document by ID in the model.
+   * Find a document by ID in the model.
    * @param {string|number} id - ID of the document, usually represents as `_id`
    * @param {{populates}} [options]
    * @return {Promise<GraphDBDocument>}
@@ -470,6 +539,27 @@ class GraphDBModel {
   async findById(id, options) {
     const result = (await this.find({_id: id}, options));
     if (result.length > 1) console.warn(' Model.findById: There might be something wrong.')
+    return result[0];
+  }
+
+  /**
+   * Find a document by URI in the model.
+   * @param {string} uri - ID of the document, usually represents as `_id`
+   * @param {{populates}} [options]
+   * @return {Promise<GraphDBDocument>}
+   * @see {@link GraphDBModel.find} for further information
+   * @example
+   * ```js
+   * // Same as
+   * (await Model.find({_uri: uri}, {populates}))[0];
+   *
+   * // Find one document with _uri = "http://example/1" and populate
+   * Model.findByUri("http://example/1", {populates: ['primary_contact']});
+   * ```
+   */
+  async findByUri(uri, options) {
+    const result = (await this.find({_uri: uri}, options));
+    if (result.length > 1) console.warn(' Model.findByUri: There might be something wrong.')
     return result[0];
   }
 
@@ -535,6 +625,21 @@ class GraphDBModel {
    */
   async findByIdAndUpdate(id, update) {
     return await this.findOneAndUpdate({_id: id}, update);
+  }
+
+  /**
+   * Find one document by URI and update
+   * @param {string} uri - The unique identifier
+   * @param {{}} update -  The Update to the found document
+   * @return {Promise<GraphDBDocument>}
+   * @example
+   * ```js
+   * // Find a document has uri = "http://example.com/person/1" and update the primary_contact.first_name to 'Lester'
+   * const doc = await Model.findByUriAndUpdate("http://example.com/person/1", {primary_contact: {first_name: 'Lester'}});
+   * ```
+   */
+  async findByUriAndUpdate(uri, update) {
+    return await this.findOneAndUpdate({_uri: uri}, update);
   }
 
   /**
@@ -605,6 +710,19 @@ class GraphDBModel {
     return this.findOneAndDelete({_id: id});
   }
 
+  /**
+   * Find one document by URI and delete it.
+   * @param {string} uri - The identifier
+   * @return {Promise<GraphDBDocument>} - The deleted document.
+   * @example
+   * ```js
+   *  // Find one document has uri "http://example.com/person/1" and delete it.
+   *  const doc = await Model.findByUriAndDelete("http://example.com/person/1");
+   * ```
+   */
+  async findByUriAndDelete(uri) {
+    return this.findOneAndDelete({_uri: uri});
+  }
 }
 
 

@@ -53,7 +53,10 @@ class GraphDBDocument {
   }
 
   get individualName() {
-    if (!this._id) return;
+    if (!this._id) {
+      console.warn(`GraphDBDocument.individualName is deprecated. Returning "undefined" for "${this._uri} as there is no _id for it.`);
+      return;
+    }
     return `${this.schemaOptions.name}_${this._id}`;
   }
 
@@ -62,13 +65,14 @@ class GraphDBDocument {
    * @returns {string}
    */
   get _uri() {
-    const defaultNS = SPARQL.getFullURI(":");
     if (this._id) {
-      return `${defaultNS}${this.schemaOptions.name}_${this._id}`;
+      const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
+      return `${baseUri}_${this._id}`;
     } else if (this._internal.uri) {
       return this._internal.uri;
     } else {
-      throw new Error("Should not reach here: Both doc._id and doc._internal.uri are unset.");
+      return undefined;
+      // throw new Error("Should not reach here: Both doc._id and doc._internal.uri are unset.");
     }
   }
 
@@ -250,11 +254,9 @@ class GraphDBDocument {
     if (this._internal.uri) {
       return this._internal.uri;
     } else if (this._id == null && this._internal.uri == null) {
-      const [ns, name] = this.schemaOptions.name.split(":");
-      const fullNS = SPARQL.getFullURI(ns + ":");
-
+      const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
       this._id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
-      this._internal.uri = `${fullNS}${name}_${this._id}`;
+      this._internal.uri = `${baseUri}_${this._id}`;
     } else if (this._internal.uri == null) {
       throw new Error("uri is not provided.")
     }
@@ -303,8 +305,13 @@ class GraphDBDocument {
     }
     // The populated field is a single Model.
     else if (isModel(currModel)) {
-      if (this[fieldKey])
-        whereClause.push(`?s = ${this[fieldKey]}`);
+      if (this[fieldKey]) {
+        if (this[fieldKey].includes("://")) {
+          whereClause.push(`?s = <${this[fieldKey]}>`);
+        } else {
+          whereClause.push(`?s = ${this[fieldKey]}`);
+        }
+      }
     } else {
       throw new Error(`GraphDBDocument.getPopulatedFieldValue: Cannot populate ${fieldKey} into ${this.schemaOptions.name}; Schema is not provided.`);
     }
@@ -348,7 +355,7 @@ class GraphDBDocument {
       await GraphDB.sendUpdateQuery(query);
       this.isNew = false;
     } else {
-      const instanceName = `${this.schemaOptions.name}_${this._id}`;
+      const uri = `<${this._uri}>`;
 
       if (!this.isModified)
         return;
@@ -367,114 +374,92 @@ class GraphDBDocument {
           // TODO: Delete nested object(s) when DELETE_TYPE set to cascade.
           // Removed the value that is marked null or undefined
           if (option)
-            deleteClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+            deleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
           continue;
         }
 
-        // Single nested model
-        if (isModel(option.type)) {
+        async function processNestedDocument(predicate, option, object) {
+          const nestedDeleteClause = [], nestedInsertClause = [];
+          const nestedModel = Array.isArray(option.type) ? option.type[0] : option.type;
 
           // Provides an individual name
-          if (typeof value === "string") {
-            deleteClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+          if (typeof object === "string") {
+            nestedDeleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
 
-            if (value.includes('://'))
-              value = `<${value}>`
-            else if (!value.includes(':'))
+            if (object.includes('://'))
+              object = `<${object}>`
+            else if (!object.includes(':'))
               throw new Error('Improper instance syntax.');
 
-            insertClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ${value}.`);
-            continue;
+            nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ${object}.`);
+            return;
           }
 
           // Create a new document if provides a data object
-          if (!(value instanceof GraphDBDocument)) {
-            // This document could contain an _id property, thus we cannot set isNew to true,
+          if (!(object instanceof GraphDBDocument)) {
+            // This object could contain an _id or _uri property, thus we cannot set isNew to true,
             // Instead, we mark all properties as modified to avoid creating duplicated object with different _id.
-            const modifiedKeys = Object.keys(value);
-            value = data[key] = new GraphDBDocument({
-              model: option.type,
-              data: value
+            const modifiedKeys = Object.keys(object);
+            object = new GraphDBDocument({
+              model: nestedModel,
+              data: object,
+              uri: object._uri
             });
-            value.markModified(modifiedKeys);
+            object.markModified(modifiedKeys);
           }
 
-          // Get initial _id for the nested GraphDBDocument.
-          if (value._id == null) {
+          // Get initial _uri for the nested GraphDBDocument.
+          if (object._uri == null) {
 
-            // Create new id if the field is empty initially
-            if (!this.initialData[key]) {
-              value.isNew = true;
-              value._id = await (await getIdGenerator()).getNextCounter(option.type.schemaOptions.name);
-              insertClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ${option.type.schemaOptions.name}_${value._id}.`);
+            // Create a new id for the nested instance if the predicate is not set initially
+            if (!this.initialData[predicate]) {
+              object.isNew = true;
+              object._id = await (await getIdGenerator()).getNextCounter(nestedModel.schemaOptions.name);
+              nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ${nestedModel.schemaOptions.name}_${object._id}.`);
             } else {
-              value._id = typeof this.initialData[key] === "object" ?
-                this.initialData[key]._id : getIdFromIdentifier(this.initialData[key]);
+              // We have the predicate set to something: a URI or {_uri, ...}
+              object._internal.uri = typeof this.initialData[predicate] === "object" ?
+                this.initialData[predicate]._uri : this.initialData[predicate];
             }
           }
 
           // Store already created nested document id
-          if (!value.isNew) {
-            deleteClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
-            insertClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ${value.individualName}.`);
+          if (!object.isNew) {
+            nestedDeleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+            nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} <${object._uri}>.`);
           }
           // TODO: Avoid unnecessary updates by introducing new state isChanged
-          await data[key].save();
+          await object.save();
+          return {object, nestedInsertClause, nestedDeleteClause};
+        }
+
+        // Single nested model
+        if (isModel(option.type)) {
+          const {object, nestedInsertClause, nestedDeleteClause} = await processNestedDocument(key, option, value);
+          data[key] = object;
+          insertClause.push(...nestedInsertClause);
+          deleteClause.push(...nestedDeleteClause);
         }
         // Array of models, most bugs come from here
         else if (Array.isArray(option.type) && isModel(option.type[0])) {
-          const nestedModel = option.type[0];
-
-          deleteClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+          deleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
           // Iterate all GraphDBDocument
           for (let [j, doc] of value.entries()) {
-
-            if (typeof doc === 'string') {
-
-              if (doc.includes('://'))
-                doc = `<${doc}>`
-              else if (!doc.includes(':'))
-                throw new Error('Improper instance syntax.');
-
-              insertClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ${doc}.`)
-              continue;
-            }
-
-            if (!(doc instanceof GraphDBDocument)) {
-              // This document could contain an _id property, thus we cannot set isNew to true,
-              // Instead, we mark all properties as modified to avoid creating duplicated object with different _id.
-              doc = value[j] = new GraphDBDocument({model: nestedModel, data: value[j]});
-              doc.markModified(Object.keys(value[j]));
-            }
-
-            // Reuse previous _id, if we don't have enough ids, create a new one
-            if (doc._id == null) {
-              // Create new id
-              if (this.initialData[key] == null || !this.initialData[key][j]) {
-                doc.isNew = true;
-                doc._id = await (await getIdGenerator()).getNextCounter(nestedModel.schemaOptions.name);
-              } else {
-                // May not be required, since it is handled in this.isModified
-                doc._id = typeof this.initialData[key][j] === "object" ?
-                  this.initialData[key][j]._id : getIdFromIdentifier(this.initialData[key][j]);
-              }
-            }
-
-            insertClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ${doc.individualName}.`);
-
-            await value[j].save();
+            const {object, nestedInsertClause} = await processNestedDocument(key, option, doc);
+            value[j] = object;
+            insertClause.push(...nestedInsertClause);
           }
         } else if (Object.values(Types).includes(option.type)) {
-          deleteClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
-          insertClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ${valToGraphDBValue(value, option.type)}.`);
+          deleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+          insertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ${valToGraphDBValue(value, option.type)}.`);
         } else if (Array.isArray(option.type)) {
 
           const innerType = option.type[0];
-          deleteClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+          deleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
 
           for (const nestedValue of value) {
             if (Object.values(Types).includes(innerType)) {
-              insertClause.push(`${instanceName} ${SPARQL.getPredicate(option.internalKey)} ${valToGraphDBValue(nestedValue, innerType)}.`);
+              insertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ${valToGraphDBValue(nestedValue, innerType)}.`);
             }
           }
         }

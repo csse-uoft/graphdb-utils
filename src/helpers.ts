@@ -163,8 +163,8 @@ export const Helpers = {
         // NamedIndividual or GraphDBDocument instance
         else if (type === Helpers.Types.NamedIndividual || (typeof val === "string" && typeof type === "function")) {
             // Provides a GraphDBDocument instance
-            if (val.individualName != null)
-                return `${val.individualName}`
+            if (val._uri != null)
+                return `<${val._uri}>`
 
             // Make sure it has a proper syntax
             if (val.includes('://'))

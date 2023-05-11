@@ -81,74 +81,115 @@ class GraphDBDocumentArray extends Array {
       const query = `${SPARQL.getSPARQLPrefixes()}\nCONSTRUCT {?s ?p ?o} WHERE {\n\t?s ?p ?o\nFILTER (\n\t${whereClause.join(' ||\n\t')}\n\t)\n}`;
       const data = {};
 
+      /**
+       * @type {Map<string, Map<string, Term[]>>}
+       */
+      const subject2Triples = new Map();
+      /**
+       * @type {Map<string, string[]>}
+       */
+      const rdfType2Subjects = new Map();
       await GraphDB.sendConstructQuery(query, ({subject, predicate, object}) => {
-        subject = SPARQL.getPrefixedURI(subject.value);
+
+        subject = subject.value;
         predicate = SPARQL.getPrefixedURI(predicate.value);
-        object = object.termType === 'NamedNode' ? SPARQL.getPrefixedURI(object.value) : object.value;
+        const objectValue = object.termType === 'NamedNode' ? object.value : object.value;
 
-        const key = subject.slice(0, subject.lastIndexOf('_'));
-        if (!this[0].model.instancePrefix2Model.has(key)) return;
+        if (predicate === "rdf:type" && object.termType === 'NamedNode' && object.value !== 'http://www.w3.org/2002/07/owl#NamedIndividual') {
+          if (rdfType2Subjects.has(object.value)) {
+            rdfType2Subjects.get(object.value).push(subject);
+          } else {
+            rdfType2Subjects.set(object.value, [subject]);
+          }
+        }
 
-        const option = this[0].model.instancePrefix2Model.get(key).internalKey2Option.get(predicate);
-
-        // Ignore unknown predicates
-        if (!option) return;
-
-        object = graphDBValueToJsValue(object, Array.isArray(option.type) ? option.type[0] : option.type);
-
-        predicate = option.externalKey;
-
-        if (!data[subject])
-          data[subject] = {};
-        const innerData = data[subject];
-
-        if (Array.isArray(option.type)) {
-          if (!innerData[predicate]) innerData[predicate] = [];
-          innerData[predicate].push(object);
+        if (!subject2Triples.has(subject)) {
+          subject2Triples.set(subject, new Map([[predicate, [objectValue]]]));
         } else {
-          innerData[predicate] = object;
+          if (!subject2Triples.get(subject).has(predicate)) {
+            subject2Triples.get(subject).set(predicate, [objectValue]);
+          } else {
+            subject2Triples.get(subject).get(predicate).push(objectValue);
+          }
         }
       });
+
+      // construct data object: uri -> {predicate: value, ...}
+      for (const [rdfType, subjects] of rdfType2Subjects) {
+        const nestedModel = this[0].model.nestedType2Model.get(rdfType);
+        // ignore unknown rdf:type
+        if (!nestedModel) continue;
+
+        for (const subject of subjects) {
+          for (const [predicate, objects] of subject2Triples.get(subject) || []) {
+            const option = nestedModel.internalKey2Option.get(predicate);
+            // ignore unknown predicates
+            if (!option) continue;
+            for (const object of objects || []) {
+              const objectJS = graphDBValueToJsValue(object, Array.isArray(option.type) ? option.type[0] : option.type);
+              const predicateJS = option.externalKey;
+
+              if (!data[subject]) data[subject] = {};
+              if (Array.isArray(option.type)) {
+                if (!data[subject][predicateJS]) data[subject][predicateJS] = [];
+                data[subject][predicateJS].push(objectJS);
+              } else {
+                data[subject][predicateJS] = objectJS;
+              }
+            }
+          }
+        }
+      }
 
       for (const path of paths) {
         for (const doc of this.values()) {
           // This can be a string or an array, instance identifier(s)
-          const instanceNames = doc.get(path);
+          const instanceUris = doc.get(path);
 
           // Skip undefined/empty predicate
-          if (instanceNames == null) continue;
+          if (instanceUris == null) continue;
+
+          const pathOption = doc.model.externalKey2Option.get(path);
+          const nestedModel = Array.isArray(pathOption.type) ? pathOption.type[0] : pathOption.type;
+
+          if (!nestedModel) {
+            console.error('Cannot populate: ', instanceUris.toString(), 'Model not found.');
+          }
 
           let newValue;
-          if (Array.isArray(instanceNames)) {
+          if (Array.isArray(instanceUris)) {
             newValue = new GraphDBDocumentArray();
-            for (const instanceName of instanceNames) {
-              if (typeof instanceName !== "string")
-                throw new Error("GraphDBDocument.populateMultiple: Error 1");
+            for (const instanceUri of instanceUris) {
+              if (typeof instanceUri !== "string")
+                throw new Error("GraphDBDocument.populateMultiple: Internal Error 1");
 
-              const _id = getIdFromIdentifier(instanceName);
-              const key = instanceName.slice(0, instanceName.lastIndexOf('_'));
-              const model = doc.model.instancePrefix2Model.get(key);
-
+              let _id;
+              // use regex for accurate matching
+              const re = new RegExp(`^${SPARQL.getFullURI(nestedModel.schemaOptions.name)}_([0-9]*)$`);
+              const matchResult = instanceUri.match(re);
+              if (matchResult) {
+                _id = matchResult[1];
+              }
               newValue.push(new GraphDBDocument({
-                data: {_id, ...data[instanceName]},
-                model: model,
+                data: _id ? {_id, ...data[instanceUri]} : {...data[instanceUri]},
+                model: nestedModel, uri: instanceUri
               }));
             }
           } else {
-            const instanceName = instanceNames;
-            if (typeof instanceNames !== "string")
+            const instanceUri = instanceUris;
+            if (typeof instanceUris !== "string")
               throw new Error("GraphDBDocument.populateMultiple: Error 1");
 
-            const _id = getIdFromIdentifier(instanceName);
-            const key = instanceName.slice(0, instanceName.lastIndexOf('_'));
-            const model = doc.model.instancePrefix2Model.get(key);
-
-            if (!model) {
-              console.error('Cannot populate: ', instanceName, 'Model not found.');
+            let _id;
+            // use regex for accurate matching
+            const re = new RegExp(`^${SPARQL.getFullURI(nestedModel.schemaOptions.name)}_([0-9]*)$`);
+            const matchResult = instanceUri.match(re);
+            if (matchResult) {
+              _id = matchResult[1];
             }
             newValue = new GraphDBDocument({
-              data: {_id, ...data[instanceName]},
-              model: model,
+              data: _id ? {_id, ...data[instanceUri]} : {...data[instanceUri]},
+              model: nestedModel, uri: instanceUri
             });
           }
 
