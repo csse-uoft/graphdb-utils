@@ -39,7 +39,7 @@ jobs:
       - name: Start MongoDB and GraphDB
         run: |
           docker run -p 27017:27017 -d mongo:latest
-          docker run -p 7200:7200 -d ontotext/graphdb:latest
+          docker run -p 7200:7200 -d ontotext/graphdb:10.2.1
 
       - name: Install Dependencies
         run: npm install
