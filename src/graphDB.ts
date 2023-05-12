@@ -18,7 +18,7 @@ export function getGraphDBAttribute(uri: string) {
 }
 
 
-type onDataCb = (data: { [key: string]: Term }) => void;
+export type onDataCb = (data: { [key: string]: Term }) => void;
 type GDBRepository = any; // RDFRepositoryClient or BaseRepositoryClient
 
 export const GraphDB = {

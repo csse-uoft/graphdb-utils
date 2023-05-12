@@ -14,7 +14,7 @@ export type GDBType = StringConstructor | NumberConstructor | DateConstructor | 
   | 'owl:NamedIndividual' | 'GraphDB.Self!' | GraphDBModelConstructor;
 
 
-interface SchemaOptions {
+export interface SchemaOptions {
   // The prefix of the created documents' identifier.
   // e.g. if `name="primary_contact"`, the new created document will have id `:primary_contact_1`
   name: string;
@@ -25,7 +25,7 @@ interface SchemaOptions {
   rdfTypes: string[];
 }
 
-interface GraphDBPropertyOptions {
+export interface GraphDBPropertyOptions {
   // Data type
   type: GDBType | GDBType[];
 
@@ -45,7 +45,7 @@ interface GraphDBPropertyOptions {
 
 }
 
-interface GraphDBSchema {
+export interface GraphDBSchema {
   [key: string]: GDBType | GraphDBPropertyOptions;
 }
 

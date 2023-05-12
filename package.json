@@ -7,7 +7,8 @@
   "scripts": {
     "test": "mocha tests/index.ts --require ts-node/register --exit",
     "postinstall": "tsc --project tsconfig.json",
-    "build": "tsc --project tsconfig.json"
+    "build": "tsc --project tsconfig.json",
+    "build:docs": "typedoc --entryPoints src/index.ts --out docs/"
   },
   "repository": {
     "type": "git",
@@ -33,7 +34,8 @@
     "chai": "^4.3.7",
     "dotenv": "^16.0.3",
     "mocha": "^10.2.0",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "typedoc": "^0.24.7"
   },
   "engines": {
     "node": ">=16.0.0"
