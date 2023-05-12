@@ -51,7 +51,6 @@ jobs:
         run: npm test
 
       - name: Build GraphDB Utils Docs
-        working-directory: backend/utils/graphdb
         run: npm run build:docs
 
       - name: Deploy Docs to GitHub Pages
