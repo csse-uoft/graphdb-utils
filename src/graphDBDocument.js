@@ -491,7 +491,7 @@ class GraphDBDocument {
    * @return {object}
    */
   toJSON() {
-    const data = {...this.data};
+    const data = {_uri: this._uri, ...this.data};
     for (const [key, val] of Object.entries(data)) {
       // Remove this property if val == null
       if (val != null && val.toJSON) {
