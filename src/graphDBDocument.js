@@ -274,6 +274,9 @@ class GraphDBDocument {
       const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
       this._id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
       this._internal.uri = `${baseUri}_${this._id}`;
+    } else if (this._id != null) {
+      const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
+      this._internal.uri = `${baseUri}_${this._id}`
     } else if (this._internal.uri == null) {
       throw new Error("uri is not provided.")
     }
