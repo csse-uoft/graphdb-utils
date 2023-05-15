@@ -77,6 +77,14 @@ class GraphDBDocument {
   }
 
   /**
+   * Set the URI of this document.
+   * @param {string} uri
+   */
+  set _uri(uri) {
+    this._internal.uri = uri;
+  }
+
+  /**
    * Get the document data.
    * @return {{}}
    */

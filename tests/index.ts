@@ -107,7 +107,7 @@ describe("GraphDB Basics", function () {
   });
 
   let AccountModel: GraphDBModelConstructor;
-  it('should populate nested document', async function () {
+  it('should create and populate nested document', async function () {
     AccountModel = createGraphDBModel({
       person: {type: PersonModel, onDelete: DeleteType.CASCADE},
       username: String,
@@ -128,7 +128,7 @@ describe("GraphDB Basics", function () {
     expect(accounts[0].person).property('familyName').eq('last name');
   });
 
-  it('should populate nested document with account uri', async function () {
+  it('should create and populate nested document with account uri', async function () {
     const accountUri = 'http://test/account/1';
     const account = AccountModel({
       person: {
@@ -146,7 +146,7 @@ describe("GraphDB Basics", function () {
     expect(accounts[0].person).property('familyName').eq('last name');
   });
 
-  it('should populate nested document with account uri + person uri', async function () {
+  it('should create and populate nested document with account uri + person uri', async function () {
     const accountUri = 'http://test/account/2';
     const personUri = 'http://test/person/2';
 
@@ -158,6 +158,7 @@ describe("GraphDB Basics", function () {
       }, {uri: personUri}),
       username: 'test3'
     }, {uri: accountUri});
+
     await account.save();
     const accounts = await AccountModel.find({_uri: accountUri}, {populates: ['person']});
     expect(accounts).length.gt(0);
@@ -165,6 +166,26 @@ describe("GraphDB Basics", function () {
     expect(accounts[0]).property('person');
     expect(accounts[0].person._uri).eq(personUri);
   });
+
+  it('should populate nested document with account uri + person uri given in the data', async function () {
+    const accountUri2 = 'http://test/account/3';
+    const personUri2 = 'http://test/person/3';
+    const account2 = AccountModel({
+      username: 'test4',
+      person: {
+        _uri: personUri2,
+        familyName: 'last name',
+        givenName: 'first name',
+        gender: 'male'
+      },
+    }, {uri: accountUri2});
+    await account2.save()
+    const accounts = await AccountModel.find({_uri: accountUri2}, {populates: ['person']});
+    expect(accounts).length.gt(0);
+    expect(accounts[0].username).eq('test4');
+    expect(accounts[0]).property('person');
+    expect(accounts[0].person._uri).eq(personUri2);
+  })
 
   let OrganizationModel: GraphDBModelConstructor;
   it('should populate array of nested document', async function () {
