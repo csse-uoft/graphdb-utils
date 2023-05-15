@@ -180,13 +180,18 @@ describe("GraphDB Basics", function () {
         gender: 'male'
       },
     });
-    await account2.save()
+    await account2.save();
     const accounts = await AccountModel.find({_uri: accountUri2}, {populates: ['person']});
     expect(accounts).length.gt(0);
     expect(accounts[0].username).eq('test4');
     expect(accounts[0]).property('person');
     expect(accounts[0].person._uri).eq(personUri2);
-  })
+
+    // should delete the person doc as well
+    account2.person = null;
+    await account2.save();
+    expect(await PersonModel.find({_uri: personUri2})).length(0);
+  });
 
   let OrganizationModel: GraphDBModelConstructor;
   it('should populate array of nested document', async function () {
@@ -215,6 +220,33 @@ describe("GraphDB Basics", function () {
     expect(organizations).length.gt(0);
     expect(organizations[0]).property('persons');
     expect(organizations[0].persons).length(2);
+  });
+
+  it('should modify nested document by giving new list', async function () {
+    const organizations = await OrganizationModel.find({}, {populates: ['persons']});
+    const oldPersonUris = [];
+    for (const person of organizations[0].persons) {
+      oldPersonUris.push(person._uri);
+    }
+
+    // Modify the persons list
+    organizations[0].persons = [
+      {
+        familyName: 'last name 3',
+        givenName: 'first name',
+        gender: 'male'
+      },
+    ];
+    await organizations[0].save();
+    expect(await PersonModel.find({familyName: 'last name 3'})).length(1);
+    // should reuse the old uri
+    expect(await PersonModel.find({_uri: oldPersonUris[0]})).length(1);
+    // should delete the second person
+    expect(await PersonModel.find({_uri: oldPersonUris[1]})).length(0);
+
+    // should delete all persons
+    organizations[0].persons = [];
+    await organizations[0].save()
   });
 
   it('should delete all accounts and organizaitons with users', async function () {

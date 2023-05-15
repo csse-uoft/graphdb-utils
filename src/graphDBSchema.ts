@@ -4,7 +4,7 @@ import {Types, defaultOptions, DeleteType, regexBuilder, SPARQL} from './helpers
 
 const store: { [key: string]: GraphDBModel } = {};
 
-export type GDBBaseValueType = string | number | Date | boolean | object | GraphDBDocument
+export type GDBBaseValueType = string | number | Date | boolean | object | GraphDBDocument | null | undefined
   | (string | number | Date | boolean | object | GraphDBDocument)[];
 
 export type GraphDBModelConstructor =
