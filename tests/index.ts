@@ -257,4 +257,30 @@ describe("GraphDB Basics", function () {
     expect(await OrganizationModel.find({})).length(0);
     expect(await PersonModel.find({})).length(0);
   });
+
+  it('should create from nested data', async function () {
+    const PhoneNumber = createGraphDBModel({
+      phoneNumber: Number,
+    }, {rdfTypes: [':PhoneNumber'], name: 'phoneNumber'});
+
+    const Person = createGraphDBModel({
+      phoneNumber: PhoneNumber,
+    }, {rdfTypes: [':Person'], name: 'person'});
+
+    const UserAccount = createGraphDBModel({
+      person: Person
+    }, {rdfTypes: [':UserAccount'], name: 'userAccount'});
+
+    const account1 = UserAccount({
+      person: {
+        phoneNumber: {
+          phoneNumber: 123456789
+        }
+      }
+    });
+    await account1.save();
+
+    const accounts = await UserAccount.find({}, {populates: ['person.phoneNumber']})
+    expect(accounts[0].person.phoneNumber.phoneNumber).eq(123456789)
+  });
 });

@@ -89,6 +89,12 @@ class GraphDBDocumentArray extends Array {
        * @type {Map<string, string[]>}
        */
       const rdfType2Subjects = new Map();
+
+      /**
+       * @type {Map<string, string>}
+       */
+      const subject2RdfType = new Map();
+
       await GraphDB.sendConstructQuery(query, ({subject, predicate, object}) => {
 
         subject = subject.value;
@@ -101,6 +107,7 @@ class GraphDBDocumentArray extends Array {
           } else {
             rdfType2Subjects.set(object.value, [subject]);
           }
+          subject2RdfType.set(subject, object.value)
         }
 
         if (!subject2Triples.has(subject)) {
@@ -149,8 +156,8 @@ class GraphDBDocumentArray extends Array {
           // Skip undefined/empty predicate
           if (instanceUris == null) continue;
 
-          const pathOption = doc.model.externalKey2Option.get(path);
-          const nestedModel = Array.isArray(pathOption.type) ? pathOption.type[0] : pathOption.type;
+          const rdfType = subject2RdfType.get((Array.isArray(instanceUris) ? instanceUris[0] : instanceUris));
+          const nestedModel = doc.model.nestedType2Model.get(rdfType);
 
           if (!nestedModel) {
             console.error('Cannot populate: ', instanceUris.toString(), 'Model not found.');
