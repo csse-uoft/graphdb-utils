@@ -166,9 +166,41 @@ describe("GraphDB Basics", function () {
     expect(accounts[0].person._uri).eq(personUri);
   });
 
-  it('should delete all accounts with users', async function () {
+  let OrganizationModel: GraphDBModelConstructor;
+  it('should populate array of nested document', async function () {
+    OrganizationModel = createGraphDBModel({
+      persons: {type: [PersonModel], onDelete: DeleteType.CASCADE},
+      name: String,
+    }, {rdfTypes: [":Organization"], name: 'organization'});
+
+    const organization = OrganizationModel({
+      persons: [
+        {
+          familyName: 'last name 1',
+          givenName: 'first name',
+          gender: 'male'
+        },
+        {
+          familyName: 'last name 2',
+          givenName: 'first name',
+          gender: 'male'
+        }
+      ],
+      name: 'test org'
+    });
+    await organization.save();
+    const organizations = await OrganizationModel.find({}, {populates: ['persons']});
+    expect(organizations).length.gt(0);
+    expect(organizations[0]).property('persons');
+    expect(organizations[0].persons).length(2);
+  });
+
+  it('should delete all accounts and organizaitons with users', async function () {
     await AccountModel.findAndDelete({});
+    await OrganizationModel.findAndDelete({});
+
     expect(await AccountModel.find({})).length(0);
+    expect(await OrganizationModel.find({})).length(0);
     expect(await PersonModel.find({})).length(0);
   });
 });

@@ -300,7 +300,11 @@ class GraphDBDocument {
         for (const [idx, subject] of this[fieldKey].entries()) {
           if (typeof subject === "object")
             throw new Error('Should not be a object.')
-          whereClause.push(`?s = ${subject}`);
+          if (subject.includes("://")) {
+            whereClause.push(`?s = <${subject}>`);
+          } else {
+            whereClause.push(`?s = ${subject}`);
+          }
         }
     }
     // The populated field is a single Model.

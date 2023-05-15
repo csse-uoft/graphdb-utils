@@ -3,6 +3,8 @@ import {SPARQL} from "./helpers";
 import {GraphDBError} from "./graphDBError";
 
 import {Term} from '@rdfjs/types';
+import {streamToString} from "./utils";
+
 const {GetQueryPayload, QueryType, UpdateQueryPayload} = require('graphdb').query;
 const {RDFMimeType, QueryContentType} = require('graphdb').http;
 
@@ -42,7 +44,9 @@ export const GraphDB = {
           reject(err);
         })
       });
-    } catch (e) {
+    } catch (e: any) {
+      if (e.response.data.on)
+        e.response.data = await streamToString(e.response.data);
       throw new GraphDBError('sendSelectQuery', e);
     }
   },
@@ -92,7 +96,8 @@ export const GraphDB = {
         })
       });
     } catch (e: any) {
-      console.error(e.message);
+      if (e.response.data.on)
+        e.response.data = await streamToString(e.response.data);
       throw new GraphDBError('sendConstructQuery', e);
     }
     console.log(`---------- ${Date.now() - time} ms -----------`);
