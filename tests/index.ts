@@ -171,6 +171,7 @@ describe("GraphDB Basics", function () {
     const accountUri2 = 'http://test/account/3';
     const personUri2 = 'http://test/person/3';
     const account2 = AccountModel({
+      _uri: accountUri2,
       username: 'test4',
       person: {
         _uri: personUri2,
@@ -178,7 +179,7 @@ describe("GraphDB Basics", function () {
         givenName: 'first name',
         gender: 'male'
       },
-    }, {uri: accountUri2});
+    });
     await account2.save()
     const accounts = await AccountModel.find({_uri: accountUri2}, {populates: ['person']});
     expect(accounts).length.gt(0);
