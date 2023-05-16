@@ -484,6 +484,7 @@ class GraphDBDocument {
         // Array of models, most bugs come from here
         else if (Array.isArray(option.type) && isModel(option.type[0])) {
           deleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+          if (this.initialData[key] == null) this.initialData[key] = [];
           // Iterate all GraphDBDocument
           for (let [j, doc] of value.entries()) {
             const {
