@@ -430,7 +430,7 @@ class GraphDBDocument {
               throw new Error('Improper instance syntax.');
 
             nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ${object}.`);
-            return;
+            return {object, nestedInsertClause, nestedDeleteClause};
           }
 
           // Create a new document if provides a data object
