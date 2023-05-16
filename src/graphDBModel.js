@@ -164,7 +164,7 @@ class GraphDBModel {
               throw new Error('Improper instance syntax.');
 
           } else if (val instanceof GraphDBDocument && !val.isNew) {
-            queryBody += `${val.individualName}`;
+            queryBody += `<${val._uri}>`;
           } else {
             const innerInstance = await options.type(val).getQueries();
             queryBody += `${innerInstance.instanceName}`;
@@ -189,7 +189,7 @@ class GraphDBModel {
                   throw new Error('Improper instance syntax.');
 
               } else if (item instanceof GraphDBDocument && !item.isNew) {
-                queryBody += `${item.individualName}`;
+                queryBody += `<${item._uri}>`;
               } else {
                 const innerInstance = await innerType(item).getQueries();
                 queryBody += `${innerInstance.instanceName}`;
