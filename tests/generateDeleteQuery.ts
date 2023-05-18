@@ -3,7 +3,7 @@ import {expect} from "chai";
 
 export function generateDeleteQuery(repository: any) {
   return async function () {
-    let PhoneNumber: GraphDBModelConstructor, Organization: GraphDBModelConstructor, Group: GraphDBModelConstructor;
+    let  Organization: GraphDBModelConstructor, Group: GraphDBModelConstructor;
     it('should create models', function () {
       const Organization = createGraphDBModel({
         comment: {type: String, internalKey: 'rdfs:comment'},
@@ -30,7 +30,7 @@ export function generateDeleteQuery(repository: any) {
       await group.save();
       group.organizations = [];
       await group.save();
-      expect(await group.find({})).to.have.property('organizations').length(0);
+      expect(await Group.findOne({})).to.have.property('organizations').length(0);
     });
   }
 }

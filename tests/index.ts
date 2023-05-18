@@ -41,5 +41,5 @@ describe("GraphDB", function () {
   });
   describe('Basics', basics(repository));
   describe('Double Save', doubleSave(repository));
-  describe('deleteQuery', generateDeleteQuery(repository));
+  describe('Delete Query', generateDeleteQuery(repository));
 });
