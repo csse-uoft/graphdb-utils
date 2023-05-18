@@ -24,22 +24,22 @@ class GraphDBDocument {
    * @param {boolean} isNew
    * @param {string} [uri]
    */
-  constructor({data, model, isNew = false, uri}) {
+  constructor({data, model, isNew, uri}) {
     this.model = model;
-    this.initialData = {...data};
     this._internal = {
-      uri: uri
+      uri: uri,
+      id: data._id,
+      isNew: isNew || false
     };
-    // shallow copy arrays/objects
-    for (const [key, value] of Object.entries(this.initialData)) {
-      if (Array.isArray(value))
-        this.initialData[key] = [...value];
-      else if (typeof value === "object")
-        this.initialData[key] = {...value};
+    if (!isNew) {
+      this._updateInitialData(data);
+      Object.assign(this, this.initialData);
+    } else {
+      // New document should have initialData set to empty.
+      Object.assign(this, data);
+      this.initialData = {};
     }
-    this.isNew = isNew;
-    this.modified = [];
-    this._id = undefined;
+    this.modified = new Set();
 
     /**
      * the document's model schema.
@@ -52,12 +52,30 @@ class GraphDBDocument {
      * @type {SchemaOptions}
      */
     this.schemaOptions = this.model.schemaOptions;
+  }
 
-    Object.assign(this, data);
+  get isNew() {
+    return this._internal.isNew || this._uri == null;
+  }
 
-    if (isNew) {
-      delete this._id;
-      delete this.initialData._id;
+  /**
+   * Shallow copy the given data into `this.initialData`.
+   * @param data
+   * @private
+   */
+  _updateInitialData(data) {
+    this.initialData = {...data};
+    delete this.initialData._id;
+    delete this.initialData._uri;
+
+    // shallow copy arrays/objects
+    for (const [key, value] of Object.entries(this.initialData)) {
+      if (Array.isArray(value))
+        this.initialData[key] = [...value];
+      else if (value instanceof GraphDBDocument)
+        this.initialData[key] = value;
+      else if (typeof value === "object")
+        this.initialData[key] = {...value};
     }
   }
 
@@ -67,6 +85,10 @@ class GraphDBDocument {
       return;
     }
     return `${this.schemaOptions.name}_${this._id}`;
+  }
+
+  get _id() {
+    return this._internal.id;
   }
 
   /**
@@ -100,7 +122,7 @@ class GraphDBDocument {
   get data() {
     const data = {...this};
     // Remove unwanted instance properties
-    ['model', 'initialData', 'isNew', 'modified', 'schema', 'schemaOptions', '_internal'].forEach(name => delete data[name]);
+    ['model', 'initialData', 'modified', 'schema', 'schemaOptions', '_internal'].forEach(name => delete data[name]);
     return data;
   }
 
@@ -110,8 +132,11 @@ class GraphDBDocument {
    * @return {boolean}
    */
   get isModified() {
-    if (this.isNew)
-      this.modified = Object.keys(this.data);
+    if (this._uri == null) {
+      for (const k of Object.keys(this.data)) {
+        this.modified.add(key);
+      }
+    }
 
     // TODO: Bug fix when using delete keywords on a property,
     //  i.e. delete characteristic.implementation.options;
@@ -120,7 +145,11 @@ class GraphDBDocument {
 
       // Mark modified if initially null and now not null/not empty
       if (initialValue == null && (Array.isArray(value) ? value.length !== 0 : value != null)) {
-        this.modified.push(key);
+        this.modified.add(key);
+      }
+      // Initially not null but set to null.
+      else if ((Array.isArray(initialValue) ? initialValue.length !== 0 : initialValue != null) && value == null) {
+        this.modified.add(key);
       }
 
       // Initially populated
@@ -129,21 +158,21 @@ class GraphDBDocument {
         if (!(value instanceof GraphDBDocument)) {
           Object.assign(initialValue, value);
           this[key] = initialValue;
-          this.modified.push(key);
+          this.modified.add(key);
         }
         // Assigned inside the inner document
         else if (value === initialValue) {
           if (value.isModified) {
-            this.modified.push(key);
+            this.modified.add(key);
           }
         }
         // Assigned with a new doc
         else if (value instanceof GraphDBDocument) {
-          this.modified.push(key);
+          this.modified.add(key);
         }
         // Assigned with a string
         else if (typeof value === "string") {
-          this.modified.push(key);
+          this.modified.add(key);
         }
         // Other cases?
         else {
@@ -157,9 +186,9 @@ class GraphDBDocument {
         if (initialValue == null && value.length === 0)
           continue;
         if (value.length === 0) {
-          this.modified.push(key);
+          this.modified.add(key);
         } else if (value.length !== initialValue.length) {
-          this.modified.push(key);
+          this.modified.add(key);
         } else {
           for (let i = 0; i < value.length; i++) {
             if (initialValue[i] instanceof GraphDBDocument) {
@@ -167,17 +196,17 @@ class GraphDBDocument {
               if (!(value[i] instanceof GraphDBDocument)) {
                 Object.assign(initialValue[i], value[i]);
                 this[key][i] = initialValue[i];
-                this.modified.push(key);
+                this.modified.add(key);
               }
               // Assigned inside the inner document
               else if (value[i] === initialValue[i]) {
                 if (value[i].isModified) {
-                  this.modified.push(key);
+                  this.modified.add(key);
                   break;
                 }
               }
             } else if (value[i] !== initialValue[i]) {
-              this.modified.push(key);
+              this.modified.add(key);
               break;
             }
           }
@@ -185,12 +214,11 @@ class GraphDBDocument {
       }
       // Simply value not equal
       else if (initialValue !== value) {
-        this.modified.push(key);
+        this.modified.add(key);
       }
     }
 
-    this.modified = [...new Set(this.modified)];
-    return this.modified.length > 0;
+    return this.modified.size > 0;
   }
 
   /**
@@ -261,18 +289,20 @@ class GraphDBDocument {
   }
 
   async generateId() {
-    if (this._id == null)
-      this._id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
-    return this._id;
+    if (this._internal.id == null)
+      this._internal.id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
+    return this._internal.id;
   }
 
   async generateURI() {
-    // Both _id and uri is not provided, create a new URI with IDGenerator.
+    // Use provided uri if it is given
     if (this._internal.uri) {
       return this._internal.uri;
-    } else if (this._id == null && this._internal.uri == null) {
+    }
+    // Both _id and uri is not provided, create a new URI with IDGenerator.
+    else if (this._id == null && this._internal.uri == null) {
       const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
-      this._id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
+      this._internal.id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
       this._internal.uri = `${baseUri}_${this._id}`;
     } else if (this._id != null) {
       const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
@@ -302,10 +332,12 @@ class GraphDBDocument {
    * @param {string[]|string} key - The external key to mark modified.
    */
   markModified(key) {
-    if (Array.isArray(key))
-      this.modified.push(...key);
-    else
-      this.modified.push(key);
+    if (Array.isArray(key)) {
+      for (const k of key) {
+        this.modified.add(k);
+      }
+    } else
+      this.modified.add(key);
   }
 
   getPopulateQuery(fieldKey, topIndex = 0) {
@@ -356,7 +388,7 @@ class GraphDBDocument {
    * @return {Promise<GraphDBDocument>}
    */
   async populate(path) {
-    if (this.isNew) throw new Error('GraphDBDocument.populate: Populate only works on existing GraphDBDocument.');
+    if (this._uri == null) throw new Error('GraphDBDocument.populate: Populate only works on existing GraphDBDocument.');
 
     if (!path) throw new Error('GraphDBDocument.populate: Path must be given.');
 
@@ -367,7 +399,7 @@ class GraphDBDocument {
   // Performance optimized
   // Breadth first populate for combining queries
   async populateMultiple(paths) {
-    if (this.isNew) throw new Error('GraphDBDocument.populateMultiple: Populate only works on existing GraphDBDocument.');
+    if (this._uri == null) throw new Error('GraphDBDocument.populateMultiple: Populate only works on existing GraphDBDocument.');
 
     if (!paths || !Array.isArray(paths) || paths.length === 0) throw new Error(`GraphDBDocument.populateMultiple: Paths ${paths} is not valid.`);
 
@@ -379,23 +411,33 @@ class GraphDBDocument {
   }
 
   async save() {
-    if (this.isNew) {
-      const {query} = await this.getQueries();
-      // console.log(query)
-      await GraphDB.sendUpdateQuery(query);
-      this.isNew = false;
-    } else {
-      const uri = `<${this._uri}>`;
+    // if (this.isNew) {
+    //   const {query} = await this.getQueries();
+    //   // console.log(query)
+    //   await GraphDB.sendUpdateQuery(query);
+    //   this.isNew = false;
+    // } else {
+    {
+      let uri;
+      const deleteClause = [], insertClause = [];
 
-      if (!this.isModified)
-        return;
+      if (this.isNew) {
+        this._uri = await this.generateURI();
+        uri = `<${this._uri}>`
+        insertClause.push(`${uri} rdf:type ${this.schemaOptions.rdfTypes.join(', ')}.`);
+        for (const key of Object.keys(this.data)) {
+          this.modified.add(key);
+        }
+      } else {
+        uri = `<${this._uri}>`;
+        if (!this.isModified)
+          return;
+      }
 
       // Remove unwanted fields
       const data = this.cleanData(this.data);
 
-      const deleteClause = [], insertClause = [];
-
-      for (const [index, key] of this.modified.entries()) {
+      for (const [index, key] of [...this.modified].entries()) {
         const option = this.externalKey2Option.get(key);
         let value = data[key];
 
@@ -435,37 +477,39 @@ class GraphDBDocument {
 
           // Create a new document if provides a data object
           if (!(object instanceof GraphDBDocument)) {
-            // This object could contain an _id or _uri property, thus we cannot set isNew to true,
-            // Instead, we mark all properties as modified to avoid creating duplicated object with different _id.
-            const modifiedKeys = Object.keys(object);
+            // This object could contain an _id or _uri property
+            // Avoid creating duplicated object with different _id or _uri.
             object = new GraphDBDocument({
               model: nestedModel,
               data: object,
-              uri: object._uri
+              uri: object._uri,
+              isNew: true
             });
-            object.markModified(modifiedKeys);
           }
 
           // Get initial _uri for the nested GraphDBDocument.
           if (object._uri == null) {
-
             // Create a new id for the nested instance if the predicate is not set initially
             if (!initialData) {
-              object.isNew = true;
-              object._id = await (await getIdGenerator()).getNextCounter(nestedModel.schemaOptions.name);
+              object._internal.isNew = true;
+              object._internal.id = await (await getIdGenerator()).getNextCounter(nestedModel.schemaOptions.name);
               nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ${nestedModel.schemaOptions.name}_${object._id}.`);
             } else {
               // We have the predicate set to something: a URI or {_uri, ...}
-              object._internal.uri = typeof initialData === "object" ? initialData._uri : initialData;
+              if (typeof initialData === 'string') {
+                object._internal.uri = initialData;
+              } else if (typeof initialData === 'object' && initialData._uri) {
+                object._internal.uri = initialData._uri;
+              } else {
+                // create a new URI
+                object._uri = await object.generateURI();
+              }
             }
           }
+          // Link nested document id
+          nestedDeleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
+          nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} <${object._uri}>.`);
 
-          // Store already created nested document id
-          if (!object.isNew) {
-            nestedDeleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
-            nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} <${object._uri}>.`);
-          }
-          // TODO: Avoid unnecessary updates by introducing new state isChanged
           await object.save();
           return {object, nestedInsertClause, nestedDeleteClause};
         }
@@ -525,7 +569,7 @@ class GraphDBDocument {
       if (insertClause.length === 0 && deleteClause.length === 0)
         return;
 
-      let deleteStatement = ''
+      let deleteStatement = '';
       for (const deleteTriple of deleteClause) {
         deleteStatement += `DELETE where {\n\t${deleteTriple}\n};\n`;
       }
@@ -533,8 +577,19 @@ class GraphDBDocument {
       const query = `${SPARQL.getSPARQLPrefixes()}\n${deleteStatement}INSERT DATA {\n\t${insertClause.join('\n\t')}\n}`
       // console.log(query)
       await GraphDB.sendUpdateQuery(query);
-      this.modified = [];
+      this.modified.clear();
+      this._internal.isNew = false;
+      this._updateInitialData(data);
     }
+  }
+
+  shallowCopy() {
+    return new GraphDBDocument({
+      data: {...this.data, _id: this._id},
+      model: this.model,
+      isNew: this.isNew,
+      uri: this._uri
+    });
   }
 
   /**
@@ -543,7 +598,7 @@ class GraphDBDocument {
    * @return {object}
    */
   toJSON() {
-    const data = {_uri: this._uri, ...this.data};
+    const data = {_uri: this._uri, _id: this._id, ...this.data};
     for (const [key, val] of Object.entries(data)) {
       // Remove this property if val == null
       if (val != null && val.toJSON) {

@@ -68,11 +68,11 @@ class GraphDBModel {
    * @return {GraphDBDocument}
    */
   createDocument(data, options) {
-    return new GraphDBDocument({data, isNew: true, model: this, uri: options?.uri});
+    return new GraphDBDocument({data, isNew: true, model: this, uri: options?.uri || data._uri});
   };
 
   /**
-   * Remove fields that are not in the schema.
+   * Remove fields that are not in the schema. Directly mutate the data object.
    * @private
    * @param {object} data
    */
@@ -163,7 +163,7 @@ class GraphDBModel {
             else
               throw new Error('Improper instance syntax.');
 
-          } else if (val instanceof GraphDBDocument && !val.isNew) {
+          } else if (val instanceof GraphDBDocument && val._uri != null) {
             queryBody += `<${val._uri}>`;
           } else {
             const innerInstance = await options.type(val).getQueries();
@@ -188,7 +188,7 @@ class GraphDBModel {
                 else
                   throw new Error('Improper instance syntax.');
 
-              } else if (item instanceof GraphDBDocument && !item.isNew) {
+              } else if (item instanceof GraphDBDocument && item._uri != null) {
                 queryBody += `<${item._uri}>`;
               } else {
                 const innerInstance = await innerType(item).getQueries();
