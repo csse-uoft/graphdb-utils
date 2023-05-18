@@ -10,6 +10,7 @@ import {
 } from '../src';
 import {basics} from "./basics";
 import {doubleSave} from "./doubleSave";
+import {generateDeleteQuery} from "./generateDeleteQuery";
 
 dotenv.config({path: `${__dirname}/.env`});
 
@@ -40,4 +41,5 @@ describe("GraphDB", function () {
   });
   describe('Basics', basics(repository));
   describe('Double Save', doubleSave(repository));
+  describe('deleteQuery', generateDeleteQuery(repository));
 });
