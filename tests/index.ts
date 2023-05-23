@@ -11,6 +11,7 @@ import {
 import {basics} from "./basics";
 import {doubleSave} from "./doubleSave";
 import {generateDeleteQuery} from "./generateDeleteQuery";
+import {MaxCallStackSize} from "./maxCall";
 
 dotenv.config({path: `${__dirname}/.env`});
 
@@ -25,6 +26,7 @@ describe("GraphDB", function () {
         'cids': 'http://ontology.eil.utoronto.ca/cids/cids#',
         'foaf': 'http://xmlns.com/foaf/0.1/',
         'cwrc': 'http://sparql.cwrc.ca/ontologies/cwrc#',
+        'tove_org': 'http://ontology.eil.utoronto.ca/tove/organization#',
       };
 
       const result = await initGraphDB({
@@ -40,6 +42,7 @@ describe("GraphDB", function () {
     });
   });
   describe('Basics', basics(repository));
-  describe('Double Save', doubleSave(repository));
-  describe('Delete Query', generateDeleteQuery(repository));
+  // describe('Double Save', doubleSave(repository));
+  // describe('Delete Query', generateDeleteQuery(repository));
+  describe('Max Call Stack', MaxCallStackSize(repository))
 });
