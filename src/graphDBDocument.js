@@ -7,7 +7,7 @@ const {
   Types,
   valToGraphDBValue,
   pathsToObj,
-  SPARQL
+  SPARQL, DeleteType
 } = require('./helpers');
 const {idGenerator} = require('./loader/index');
 const {getIdGenerator} = require("./loader");
@@ -443,15 +443,18 @@ class GraphDBDocument {
 
         // Skip undefined value
         if (value == null) {
-          // TODO: Delete nested object(s) when DELETE_TYPE set to cascade.
           // Removed the value that is marked null or undefined
           if (option) {
             deleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
-            if (isModel(option.type) && this.initialData[key]) {
-              const {where} = option.type.generateDeleteQuery(this.initialData[key], 0);
-              deleteClause.push(where);
+            // Delete the nested object when DELETE_TYPE set to cascade.
+            if (option.onDelete === DeleteType.CASCADE) {
+              if (isModel(option.type) && this.initialData[key] != null) {
+                const {where} = option.type.generateDeleteQuery(this.initialData[key], 0);
+                deleteClause.push(where);
+              }
             }
           }
+          // The multiple nested document is handled later
           if (Array.isArray(option.type))
             value = [];
           else
@@ -538,8 +541,8 @@ class GraphDBDocument {
             value[j] = object;
             insertClause.push(...nestedInsertClause);
           }
-          if (this.initialData[key].length !== value.length) {
-            // Delete extra documents
+          if (this.initialData[key].length !== value.length && option.onDelete === DeleteType.CASCADE) {
+            // Delete extra documents when onDelete set to CASCADE
             const newUris = value.map(doc => doc._uri);
             let cnt = 0;
             for (const oldDoc of this.initialData[key]) {

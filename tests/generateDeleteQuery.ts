@@ -26,7 +26,7 @@ export function generateDeleteQuery(repository: any) {
 
 
 
-    it('should remove an organization from group', async function () {
+    it('should remove an organization from group but not delete the organization instance', async function () {
       const organization = GDBOrganizationModel({
         comment: 'org1'
       })
