@@ -42,7 +42,7 @@ describe("GraphDB", function () {
     });
   });
   describe('Basics', basics(repository));
-  // describe('Double Save', doubleSave(repository));
-  // describe('Delete Query', generateDeleteQuery(repository));
+  describe('Double Save', doubleSave(repository));
+  describe('Delete Query', generateDeleteQuery(repository));
   describe('Max Call Stack', MaxCallStackSize(repository))
 });
