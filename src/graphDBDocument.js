@@ -132,6 +132,17 @@ class GraphDBDocument {
    * @return {boolean}
    */
   get isModified() {
+    return this.checkModified();
+  }
+
+  checkModified(iteratedCache = new Set()) {
+    // Check if we already checked this document.
+    if (iteratedCache.has(this)) {
+      return;
+    }
+    iteratedCache.add(this);
+
+    // Mark all properties as modified for new document.
     if (this._uri == null) {
       for (const k of Object.keys(this.data)) {
         this.modified.add(key);
@@ -162,7 +173,7 @@ class GraphDBDocument {
         }
         // Assigned inside the inner document
         else if (value === initialValue) {
-          if (value.isModified) {
+          if (value.checkModified(iteratedCache)) {
             this.modified.add(key);
           }
         }
@@ -200,7 +211,7 @@ class GraphDBDocument {
               }
               // Assigned inside the inner document
               else if (value[i] === initialValue[i]) {
-                if (value[i].isModified) {
+                if (value[i].checkModified(iteratedCache)) {
                   this.modified.add(key);
                   break;
                 }
