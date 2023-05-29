@@ -34,7 +34,7 @@ export function RemoveIndicatorFromOrg(repository: any) {
                 researchers: {type: [GDBUserAccountModel], internalKey: ':hasResearcher'},
                 legalName: {type: String, internalKey: 'tove_org:hasLegalName'},
                 hasId: {type: GDBOrganizationIdModel, internalKey: 'tove_org:hasID', onDelete: DeleteType.CASCADE}, // contains organization number
-                hasIndicators: {type: [Types.NamedIndividual], internalKey: 'cids:hasIndicator'},
+                hasIndicators: {type: [() => GDBIndicatorModel], internalKey: 'cids:hasIndicator'},
                 hasOutcomes: {type: [GDBOutcomeModel], internalKey: 'cids:hasOutcome', onDelete: DeleteType.CASCADE},
                 telephone: {type: GDBPhoneNumberModel, internalKey: 'ic:hasTelephone', onDelete: DeleteType.CASCADE},
                 contactName: {type: String, internalKey: ':hasContactName'},
