@@ -1,6 +1,6 @@
 const {GraphDBDocument} = require('./graphDBDocument');
 const {GraphDB, getGraphDBAttribute} = require('./graphDB');
-const {getIdFromIdentifier, pathsToObj, graphDBValueToJsValue, SPARQL} = require('./helpers');
+const {getModel, pathsToObj, graphDBValueToJsValue, SPARQL} = require('./helpers');
 
 const generateQuery = (doc, populate, cnt = 0) => {
   const whereClause = [], paths = [];
@@ -123,7 +123,7 @@ class GraphDBDocumentArray extends Array {
 
       // construct data object: uri -> {predicate: value, ...}
       for (const [rdfType, subjects] of rdfType2Subjects) {
-        const nestedModel = this[0].model.nestedType2Model.get(rdfType);
+        const nestedModel = getModel(this[0].model.nestedType2Model.get(rdfType));
         // ignore unknown rdf:type
         if (!nestedModel) continue;
 
@@ -157,7 +157,7 @@ class GraphDBDocumentArray extends Array {
           if (instanceUris == null) continue;
 
           const rdfType = subject2RdfType.get((Array.isArray(instanceUris) ? instanceUris[0] : instanceUris));
-          const nestedModel = doc.model.nestedType2Model.get(rdfType);
+          const nestedModel = getModel(doc.model.nestedType2Model.get(rdfType));
 
           if (!nestedModel) {
             console.error('Cannot populate: ', instanceUris.toString(), 'Model not found.');

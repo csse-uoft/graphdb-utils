@@ -219,7 +219,19 @@ export const Helpers = {
         return target;
     },
 
-    isModel: (object: any) => typeof object === "function" && object.name === 'Model',
+    // Return the model if it is a model.
+    isModel: (object: any) => {
+        if (typeof object === "function" && object.name === 'Model') {
+            return object;
+        } else if (typeof object === "function" && typeof object() === "function" && object().name === 'Model'){
+            return object();
+        }
+    },
+
+    getModel: (object: any) => {
+        return Helpers.isModel(object);
+    },
+
     getIdFromIdentifier: (identifier: any) => identifier.slice(identifier.lastIndexOf('_') + 1),
     /**
      * Convert populate object to paths.
