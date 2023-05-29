@@ -6,7 +6,8 @@ import {
   GraphDB,
   GraphDBModelConstructor,
   initGraphDB,
-  MongoDBIdGenerator
+  MongoDBIdGenerator,
+  Types
 } from '../src';
 import {basics} from "./basics";
 import {doubleSave} from "./doubleSave";
@@ -30,7 +31,7 @@ export function RemoveIndicatorFromOrg(repository: any) {
         researchers: {type: [GDBUserAccountModel], internalKey: ':hasResearcher'},
         legalName:{type: String, internalKey:'tove_org:hasLegalName'},
         hasId: {type: GDBOrganizationIdModel, internalKey: 'tove_org:hasID', onDelete: DeleteType.CASCADE}, // contains organization number
-        hasIndicators: {type: [GDBIndicatorModel], internalKey: 'cids:hasIndicator'},
+        hasIndicators: {type: [Types.NamedIndividual], internalKey: 'cids:hasIndicator'},
         hasOutcomes: {type: [GDBOutcomeModel], internalKey: 'cids:hasOutcome', onDelete: DeleteType.CASCADE},
         telephone: {type: GDBPhoneNumberModel, internalKey: 'ic:hasTelephone', onDelete: DeleteType.CASCADE},
         contactName: {type: String, internalKey: ':hasContactName'},
@@ -71,7 +72,7 @@ export function RemoveIndicatorFromOrg(repository: any) {
       const formOrganizations = [organization];
       const uri = indicator1._uri;
 
-      const indicator = await GDBIndicatorModel.findOne({_uri: uri}, {populates: ['forOrganizations.hasIndicators']});
+      const indicator = await GDBIndicatorModel.findOne({_uri: uri}, {populates: ['forOrganizations']});
       expect((indicator as any).forOrganizations[0].hasIndicators).length(1)
       await Promise.all((indicator as any).forOrganizations.map((org: any) => {
         const index = org.hasIndicators.indexOf(uri);
