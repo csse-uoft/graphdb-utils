@@ -21,7 +21,9 @@ export function PopulateIssue(repository: any) {
             });
 
             GDBOrganizationModel = createGraphDBModel({
-                comment: {type: String, internalKey: 'rdfs:comment'}
+                comment: {type: String, internalKey: 'rdfs:comment'},
+                hasIndicators: {type: [() => GDBIndicatorModel], internalKey: 'cids:hasIndicator'},
+                hasOutcomes: {type: [GDBOutcomeModel], internalKey: 'cids:hasOutcome', onDelete: DeleteType.CASCADE},
             }, {
                 rdfTypes: ['cids:Organization'], name: 'organization'
             });
@@ -56,6 +58,7 @@ export function PopulateIssue(repository: any) {
             const indicator1 = GDBIndicatorModel({
                 name: 'ind1',
                 forOutcomes: [outcome],
+                forOrganizations: [outcome.forOrganization],
                 unitOfMeasure: {
                     label: 'km'
                 }
