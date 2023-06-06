@@ -93,7 +93,7 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
         if (Array.isArray(options.type)) {
           nestedModel = getModel(options.type[0]) as GraphDBModel;
         } else {
-          nestedModel = options.type as GraphDBModel;
+          nestedModel = getModel(options.type) as GraphDBModel;
         }
         nestedModel._preload(iteratedCache);
         for (const nestedRdfType of nestedModel.schemaOptions.rdfTypes) {
