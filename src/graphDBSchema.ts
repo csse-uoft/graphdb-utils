@@ -68,7 +68,7 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
     const internalKey2Option = new Map();
 
     // nested model information
-    const nestedType2Model = new Map();
+    const nestedType2Model = new Uri2ModelMap();
 
     for (let [key, options] of Object.entries(schema)) {
       // Map to our data structure with some predefined options
@@ -103,9 +103,6 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
           else
             nestedType2Model.set(SPARQL.getFullURI(nestedRdfType), nestedModel);
         }
-        for (const [innerKey, innerVal] of nestedModel.nestedType2Model?.entries() || []) {
-          nestedType2Model.set(innerKey, innerVal);
-        }
 
       }
     }
@@ -130,5 +127,40 @@ function getGraphDBModel(name: string) {
   }
   return store[`:${name}`];
 }
+
+class Uri2ModelMap {
+  private map = new Map<string, GraphDBModel>();
+
+  /**
+   * Recursively find the model by URI.
+   */
+  public get(uri: string, iterated = new Set()) {
+    if (iterated.has(this)) {
+      return;
+    }
+    iterated.add(this);
+
+    if (this.map.has(uri)) {
+      return this.map.get(uri);
+    } else {
+      return this._getFromNestedModels(uri, iterated);
+    }
+  }
+
+  public set(uri: string, model: GraphDBModel) {
+    this.map.set(uri, model);
+  }
+
+  private _getFromNestedModels(uri: string, iterated = new Set()) {
+    for (const nestedModel of this.map.values()) {
+      const nestedResult = nestedModel.nestedType2Model.get(uri, iterated);
+      if (nestedResult) {
+        return nestedResult;
+      }
+    }
+    return undefined;
+  }
+}
+
 
 module.exports = {Types, DeleteType, regexBuilder, createGraphDBModel, getGraphDBModel}

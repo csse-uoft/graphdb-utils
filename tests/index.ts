@@ -29,6 +29,7 @@ describe("GraphDB", function () {
         'foaf': 'http://xmlns.com/foaf/0.1/',
         'cwrc': 'http://sparql.cwrc.ca/ontologies/cwrc#',
         'tove_org': 'http://ontology.eil.utoronto.ca/tove/organization#',
+        'iso21972': 'http://ontology.eil.utoronto.ca/ISO21972/iso21972#',
       };
 
       const result = await initGraphDB({
