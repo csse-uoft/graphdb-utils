@@ -305,11 +305,15 @@ class GraphDBModel {
 
             // $in with array
             if (operator === '$in' && Array.isArray(operand)) {
-              const filter = operand.map(item =>
-                `${object} = ${valToGraphDBValue(item, Array.isArray(options.type) ?
-                  options.type[0] : options.type)}`
-              ).join(' || ');
-              whereClause.push(`FILTER(${filter})`);
+              if (operand.length > 0) {
+                const filter = operand.map(item =>
+                  `${object} = ${valToGraphDBValue(item, Array.isArray(options.type) ?
+                    options.type[0] : options.type)}`
+                ).join(' || ');
+                whereClause.push(`FILTER(${filter})`);
+              } else {
+                whereClause.pop();
+              }
             } else if (operator === "$gt" || operator === "$lt" || operator === "$ge" || operator === "$le") {
               whereClause.push(`FILTER(${object} ${Comparison[operator]} ${operand})`);
             } else if (operator === '$regex') {
