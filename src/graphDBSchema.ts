@@ -1,7 +1,6 @@
 import {GraphDBDocument} from './graphDBDocument';
 import {GraphDBModel} from './graphDBModel';
 import {Types, defaultOptions, DeleteType, regexBuilder, SPARQL, isModel, getModel} from './helpers';
-import {expect} from "chai";
 
 const store: { [key: string]: GraphDBModel } = {};
 
