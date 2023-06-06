@@ -40,6 +40,8 @@ class GraphDBModel {
    */
   schema;
 
+  preloaded = false;
+
   /**
    * Internally create a GraphDBModel class
    * @param {{}} props
@@ -59,8 +61,14 @@ class GraphDBModel {
     return Model;
   }
 
+  _preload(iteratedCache) {
+    if (!this.preloaded) {
+      Object.assign(this, this.preload(iteratedCache));
+      this.preloaded = true;
+    }
+  }
 
-  /**
+/**
    * Create a document based on the model.
    * Identical to `Model(data)`
    * @param {object} data - The data / properties in the new document
@@ -68,6 +76,7 @@ class GraphDBModel {
    * @return {GraphDBDocument}
    */
   createDocument(data, options) {
+    this._preload();
     return new GraphDBDocument({data, isNew: true, model: this, uri: options?.uri || data._uri});
   };
 
@@ -91,6 +100,8 @@ class GraphDBModel {
    * @return {string[]}
    */
   getCascadePaths() {
+    this._preload();
+
     const paths = [];
     for (const [key, option] of this.externalKey2Option.entries()) {
       const type = Array.isArray(option.type) ? option.type[0] : option.type;
@@ -111,6 +122,7 @@ class GraphDBModel {
    * @return {Promise<{footer: string, instanceName: string, innerQueryBodies: string[], header: string, queryBody: string}>}
    */
   async generateCreationQuery(uri, data) {
+    this._preload();
     // Remove unwanted fields
     this.cleanData(data);
 
@@ -218,6 +230,7 @@ class GraphDBModel {
    * @return {{query: string, where: array, construct: array}}
    */
   generateFindQuery(filter, config = {}) {
+    this._preload();
     const {counters = {p: 0, o: 0}, subjectNameOverride} = config;
     const subject = subjectNameOverride || `?s`;
     const constructClause = [], whereClause = [];
@@ -355,6 +368,7 @@ class GraphDBModel {
    * @return {{query: string, where: string[]}}
    */
   generateDeleteQuery(doc, cnt = 0) {
+    this._preload();
     const subject = `<${doc._uri}>`;
     const where = [`${subject} ?p_${cnt} ?o_${cnt}.`];
 
@@ -433,6 +447,7 @@ class GraphDBModel {
    * ```
    */
   async find(filter, options = {}) {
+    this._preload();
     const {populates = []} = options;
     const {query} = this.generateFindQuery(filter, {populates});
 

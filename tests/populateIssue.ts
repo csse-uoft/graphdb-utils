@@ -30,12 +30,7 @@ export function PopulateIssue(repository: any) {
                 rdfTypes: ['cids:Indicator'], name: 'indicator'
             });
 
-
-
-
         })
-
-
 
         it('should fetch the outcome and populate its indicator', async function () {
             const outcome = GDBOutcomeModel({
@@ -50,7 +45,8 @@ export function PopulateIssue(repository: any) {
             outcome.indicators = [indicator1];
             await outcome.save();
 
-            expect(await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators']}));
+            const result = await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators']});
+            console.log(result)
         });
     }
 }

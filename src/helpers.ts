@@ -114,6 +114,19 @@ export function regexBuilder (pattern: string, flags?: string) {
     }
 }
 
+// Return the model if it is a model.
+export function isModel(object: any) {
+    if (typeof object === "function" && object.name === 'Model') {
+        return object;
+    } else if (typeof object === "function" && typeof object() === "function" && object().name === 'Model'){
+        return object();
+    }
+}
+
+export function getModel(object: any) {
+    return isModel(object);
+}
+
 export const Helpers = {
     Types,
     DeleteType,
@@ -121,6 +134,8 @@ export const Helpers = {
     stringToSpaces: (string: string) => string.replace(/./g, ' '),
     Comparison,
     regexBuilder,
+    isModel,
+    getModel,
     valToGraphDBValue: (val: any, type: GDBType) => {
         if (val == null) throw new Error('valToGraphDBValue: Val cannot be undefined');
 
@@ -217,19 +232,6 @@ export const Helpers = {
         });
 
         return target;
-    },
-
-    // Return the model if it is a model.
-    isModel: (object: any) => {
-        if (typeof object === "function" && object.name === 'Model') {
-            return object;
-        } else if (typeof object === "function" && typeof object() === "function" && object().name === 'Model'){
-            return object();
-        }
-    },
-
-    getModel: (object: any) => {
-        return Helpers.isModel(object);
     },
 
     getIdFromIdentifier: (identifier: any) => identifier.slice(identifier.lastIndexOf('_') + 1),

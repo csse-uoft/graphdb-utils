@@ -1,6 +1,7 @@
 import {GraphDBDocument} from './graphDBDocument';
 import {GraphDBModel} from './graphDBModel';
-import {Types, defaultOptions, DeleteType, regexBuilder, SPARQL} from './helpers';
+import {Types, defaultOptions, DeleteType, regexBuilder, SPARQL, isModel, getModel} from './helpers';
+import {expect} from "chai";
 
 const store: { [key: string]: GraphDBModel } = {};
 
@@ -52,64 +53,71 @@ export interface GraphDBSchema {
 export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaOptions): GraphDBModelConstructor {
   if (!schema) throw new Error('schema must be provided');
 
-  const externalKey2Option = new Map();
-  const internalKey2Option = new Map();
-
-  // nested model information
-  const nestedType2Model = new Map();
-
   // if type.schemaOptions.name does not contain prefix, default to empty prefix `:`
   if (!schemaOptions.name.includes(':')) {
     schemaOptions.name = `:${schemaOptions.name}`
   }
 
-  for (let [key, options] of Object.entries(schema)) {
-    // Map to our data structure with some predefined options
-    if (typeof options !== "object" || Array.isArray(options)) {
-      options = {...defaultOptions, type: options};
-    } else {
-      options = {...defaultOptions, ...options};
+  const preload = (iteratedCache = new Set()) => {
+    // Check if we already checked this document.
+    if (iteratedCache.has(schemaOptions.name)) {
+      return;
     }
+    iteratedCache.add(schemaOptions.name);
 
-    const internalKey = options.internalKey || `:${options.prefix}${key}`;
-    const externalKey = options.externalKey || (Array.isArray(options.type) ? `${key}` : key);
+    const externalKey2Option = new Map();
+    const internalKey2Option = new Map();
 
-    options = {...options, internalKey, externalKey, schemaKey: key};
+    // nested model information
+    const nestedType2Model = new Map();
 
-    externalKey2Option.set(externalKey, options);
-    internalKey2Option.set(internalKey, options);
-
-    // Nested model, i.e. `[GDBPerson]` or `GDBPerson`
-    if ((typeof options.type === "function" && options.type.name === 'Model')
-      || Array.isArray(options.type) && typeof options.type[0] === "function" && options.type[0].name === 'Model') {
-
-      let nestedModel: GraphDBModel;
-      if (Array.isArray(options.type)) {
-        nestedModel = options.type[0] as GraphDBModel;
+    for (let [key, options] of Object.entries(schema)) {
+      // Map to our data structure with some predefined options
+      if (typeof options !== "object" || Array.isArray(options)) {
+        options = {...defaultOptions, type: options};
       } else {
-        nestedModel = options.type as GraphDBModel;
-      }
-      for (const nestedRdfType of nestedModel.schemaOptions.rdfTypes) {
-        if (nestedRdfType === Types.NamedIndividual || nestedRdfType === SPARQL.getFullURI(Types.NamedIndividual)) continue;
-        if (nestedRdfType.includes("://"))
-          nestedType2Model.set(nestedRdfType, nestedModel);
-        else
-          nestedType2Model.set(SPARQL.getFullURI(nestedRdfType), nestedModel);
-      }
-      for (const [innerKey, innerVal] of nestedModel.nestedType2Model.entries()) {
-        nestedType2Model.set(innerKey, innerVal);
+        options = {...defaultOptions, ...options};
       }
 
+      const internalKey = options.internalKey || `:${options.prefix}${key}`;
+      const externalKey = options.externalKey || (Array.isArray(options.type) ? `${key}` : key);
+
+      options = {...options, internalKey, externalKey, schemaKey: key};
+
+      externalKey2Option.set(externalKey, options);
+      internalKey2Option.set(internalKey, options);
+
+      // Nested model, i.e. `[GDBPerson]` or `GDBPerson`
+      if (isModel(options.type) || Array.isArray(options.type) && isModel(options.type[0])) {
+
+        let nestedModel: GraphDBModel;
+        if (Array.isArray(options.type)) {
+          nestedModel = getModel(options.type[0]) as GraphDBModel;
+        } else {
+          nestedModel = options.type as GraphDBModel;
+        }
+        nestedModel._preload(iteratedCache);
+        for (const nestedRdfType of nestedModel.schemaOptions.rdfTypes) {
+          if (nestedRdfType === Types.NamedIndividual || nestedRdfType === SPARQL.getFullURI(Types.NamedIndividual)) continue;
+          if (nestedRdfType.includes("://"))
+            nestedType2Model.set(nestedRdfType, nestedModel);
+          else
+            nestedType2Model.set(SPARQL.getFullURI(nestedRdfType), nestedModel);
+        }
+        for (const [innerKey, innerVal] of nestedModel.nestedType2Model?.entries() || []) {
+          nestedType2Model.set(innerKey, innerVal);
+        }
+
+      }
     }
-  }
 
-  // The instance of an owl:Class must be an owl:NamedIndividual
-  if (!schemaOptions.rdfTypes.includes(Types.NamedIndividual)) {
-    schemaOptions.rdfTypes.unshift(Types.NamedIndividual);
+    // The instance of an owl:Class must be an owl:NamedIndividual
+    if (!schemaOptions.rdfTypes.includes(Types.NamedIndividual)) {
+      schemaOptions.rdfTypes.unshift(Types.NamedIndividual);
+    }
+    return {externalKey2Option, internalKey2Option, nestedType2Model, schemaOptions}
   }
-  const model = GraphDBModel.init({
-    externalKey2Option, internalKey2Option, nestedType2Model, schemaOptions, schema
-  });
+  const model = GraphDBModel.init({schemaOptions, schema, preload});
   // Store it internally
   store[schemaOptions.name] = model;
   // @ts-ignore
