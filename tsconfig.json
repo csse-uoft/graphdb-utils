@@ -20,6 +20,6 @@
     "node_modules/graphdb/lib/types.d.ts"
   ],
   "exclude": [
-    "src/tests"
+    "tests"
   ]
 }
