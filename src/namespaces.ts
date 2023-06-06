@@ -4,6 +4,7 @@ export const namespaces: {[key: string]: string} = {
     'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
     'xml': 'http://www.w3.org/XML/1998/namespace',
     'xsd': 'http://www.w3.org/2001/XMLSchema#',
+    'iso21972': 'http://ontology.eil.utoronto.ca/ISO21972/iso21972#',
 };
 
 export function addNamespace(prefix: string, uri: string) {

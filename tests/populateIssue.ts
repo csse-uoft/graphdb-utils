@@ -26,6 +26,12 @@ export function PopulateIssue(repository: any) {
                 rdfTypes: ['cids:Organization'], name: 'organization'
             });
 
+            GDBUnitOfMeasure = createGraphDBModel({
+                label: {type: String, internalKey: 'rdfs:label'},
+            }, {
+                rdfTypes: ['iso21972:Unit_of_measure'], name: 'unit_of_measure'
+            });
+
             GDBIndicatorModel = createGraphDBModel({
                 name: {type: String, internalKey: 'tove_org:hasName'},
                 description: {type: String, internalKey: 'cids:hasDescription'},
@@ -49,15 +55,16 @@ export function PopulateIssue(repository: any) {
             await outcome.save();
             const indicator1 = GDBIndicatorModel({
                 name: 'ind1',
-                forOutcomes: [outcome]
+                forOutcomes: [outcome],
+                unitOfMeasure: {
+                    label: 'km'
+                }
             })
             await indicator1.save();
             outcome.indicators = [indicator1];
             await outcome.save();
-            // @ts-ignore
-            const organizationURIs = [outcome.forOrganization._uri];
-            expect(await GDBOutcomeModel.find({_uri: outcome._uri, forOrganization: {$in: []}}, {populates: ['indicators']}));
-            expect(await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators']}));
+            const outcomes = await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators.unitOfMeasure']})
+            expect(await GDBOutcomeModel.find({}, {populates: ['indicators']}));
             const result = await GDBOutcomeModel.find({});
             expect(result)
         });
