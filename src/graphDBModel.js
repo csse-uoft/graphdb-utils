@@ -255,7 +255,8 @@ class GraphDBModel {
       const filterStr = ids.map(id =>
         `${subject} = ${this.schemaOptions.name}_${id}`
       ).join(' || ');
-      whereClause.push(`FILTER(${filterStr})`);
+      if (filterStr)
+        whereClause.push(`FILTER(${filterStr})`);
     }
 
     // If filter._uri is provided, constraints document ids
