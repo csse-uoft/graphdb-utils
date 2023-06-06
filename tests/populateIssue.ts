@@ -54,7 +54,7 @@ export function PopulateIssue(repository: any) {
             await indicator1.save();
             outcome.indicators = [indicator1];
             await outcome.save();
-
+            expect(await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators']}));
             const result = await GDBOutcomeModel.find({});
             expect(result)
         });
