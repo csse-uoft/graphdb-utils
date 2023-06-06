@@ -1,6 +1,7 @@
 import {createGraphDBModel, DeleteType, GraphDBModelConstructor, Types} from "../src";
 import {expect} from "chai";
 
+
 export function PopulateIssue(repository: any) {
     return async function () {
         let  GDBOrganizationModel: GraphDBModelConstructor, Group: GraphDBModelConstructor, GDBUserAccountModel: GraphDBModelConstructor,
@@ -46,7 +47,7 @@ export function PopulateIssue(repository: any) {
             await outcome.save();
 
             const result = await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators']});
-            console.log(result)
+            expect(result)
         });
     }
 }
