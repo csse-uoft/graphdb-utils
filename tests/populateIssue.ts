@@ -14,10 +14,16 @@ export function PopulateIssue(repository: any) {
             GDBOutcomeModel = createGraphDBModel({
                 name: {type: String, internalKey: 'tove_org:hasName'},
                 description: {type: String, internalKey: 'cids:hasDescription'},
-                forOrganization: {type: Types.NamedIndividual, internalKey: 'cids:forOrganization'},
+                forOrganization: {type: () => GDBOrganizationModel, internalKey: 'cids:forOrganization'},
                 indicators: {type:　[() => GDBIndicatorModel], internalKey: 'cids:hasIndicator'},
             }, {
                 rdfTypes: ['cids:Outcome'], name: 'outcome'
+            });
+
+            GDBOrganizationModel = createGraphDBModel({
+                comment: {type: String, internalKey: 'rdfs:comment'}
+            }, {
+                rdfTypes: ['cids:Organization'], name: 'organization'
             });
 
             GDBIndicatorModel = createGraphDBModel({
@@ -36,6 +42,9 @@ export function PopulateIssue(repository: any) {
         it('should fetch the outcome and populate its indicator', async function () {
             const outcome = GDBOutcomeModel({
                 name: 'outcome1',
+                forOrganization: GDBOrganizationModel({
+                    comment: 'Org1'
+                })
             })
             await outcome.save();
             const indicator1 = GDBIndicatorModel({
@@ -46,7 +55,7 @@ export function PopulateIssue(repository: any) {
             outcome.indicators = [indicator1];
             await outcome.save();
 
-            const result = await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators']});
+            const result = await GDBOutcomeModel.find({});
             expect(result)
         });
     }
