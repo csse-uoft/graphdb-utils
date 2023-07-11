@@ -146,7 +146,7 @@ export const GraphDB = {
       ${SPARQL.getSPARQLPrefixes()}
       select * where {
         <${uri}> ?p ?o .
-      }`;
+      } LIMIT 1`;
 
     let existed = false;
     await GraphDB.sendSelectQuery(query, false, ({p, o}) => {
