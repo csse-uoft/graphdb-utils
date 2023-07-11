@@ -47,6 +47,8 @@ export function basics(repository: any) {
       await person1.save();
 
       expect(await GraphDB.isURIExisted(personUri)).true;
+      expect(await GraphDB.isURIExistedAsSubject(personUri)).true;
+      expect(await GraphDB.isURIExistedAsObject(personUri)).false;
       expect(await GraphDB.isURIExisted(personUri + '1')).false;
     });
 
