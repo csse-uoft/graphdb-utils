@@ -53,9 +53,6 @@ jobs:
       - name: Build GraphDB Utils Docs
         run: npm run build:docs
 
-      - name: Copy examples
-        run: cp ./examples ./docs
-
       - name: Deploy Docs to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
