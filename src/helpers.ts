@@ -163,7 +163,7 @@ export const Helpers = {
                 val = new Date(val).toISOString();
             else if (val instanceof Date)
                 val = val.toISOString();
-            return `"${val}"^^xsd:datetimes`;
+            return `"${val}"^^xsd:dateTime`;
         }
         // String
         else if (type === Helpers.Types.String) {
