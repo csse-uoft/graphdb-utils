@@ -138,4 +138,20 @@ export const GraphDB = {
 
     return result;
   },
+  isURIExisted: async (uri: string, repository?: GDBRepository) => {
+    if (!uri.includes("://")) {
+      uri = SPARQL.getFullURI(uri);
+    }
+    const query = `
+      ${SPARQL.getSPARQLPrefixes()}
+      select * where {
+        <${uri}> ?p ?o .
+      }`;
+
+    let existed = false;
+    await GraphDB.sendSelectQuery(query, false, ({p, o}) => {
+      existed = true;
+    }, repository);
+    return existed;
+  }
 }
