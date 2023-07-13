@@ -88,7 +88,7 @@ const PersonModel = createGraphDBModel({
     // Example: {type: () => require("./some-js-file").SomeModel, internalKey: ...}
     address: {type: AddressModel, internalKey: 'ic:hasAddress'},
 }, {
-    rdfTypes: ['ic:Address'], name: 'person'
+    rdfTypes: ['cids:Person'], name: 'person'
 });
 ```
 
