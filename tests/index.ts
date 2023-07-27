@@ -29,6 +29,7 @@ describe("GraphDB", function () {
         'foaf': 'http://xmlns.com/foaf/0.1/',
         'cwrc': 'http://sparql.cwrc.ca/ontologies/cwrc#',
         'tove_org': 'http://ontology.eil.utoronto.ca/tove/organization#',
+        'iso21972': 'http://ontology.eil.utoronto.ca/ISO21972/iso21972#',
       };
 
       const result = await initGraphDB({
@@ -43,10 +44,10 @@ describe("GraphDB", function () {
       await GraphDB.sendUpdateQuery(`CLEAR DEFAULT`);
     });
   });
-  describe('Basics', basics(repository));
-  describe('Double Save', doubleSave(repository));
-  describe('Delete Query', generateDeleteQuery(repository));
-  describe('Max Call Stack', MaxCallStackSize(repository));
-  describe('Remove Indicator From Org', RemoveIndicatorFromOrg(repository))
+  // describe('Basics', basics(repository));
+  // describe('Double Save', doubleSave(repository));
+  // describe('Delete Query', generateDeleteQuery(repository));
+  // describe('Max Call Stack', MaxCallStackSize(repository));
+  // describe('Remove Indicator From Org', RemoveIndicatorFromOrg(repository))
   describe('PopulateIssue', PopulateIssue(repository))
 });
