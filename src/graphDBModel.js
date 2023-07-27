@@ -28,7 +28,7 @@ class GraphDBModel {
    */
   internalKey2Option;
   /**
-   * @type {Map<string, GraphDBModel>}
+   * @type {Uri2ModelMap}
    */
   nestedType2Model;
   /**

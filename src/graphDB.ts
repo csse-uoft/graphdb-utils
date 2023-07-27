@@ -138,4 +138,53 @@ export const GraphDB = {
 
     return result;
   },
+  isURIExisted: async (uri: string, repository?: GDBRepository) => {
+    if (!uri.includes("://")) {
+      uri = SPARQL.getFullURI(uri);
+    }
+    const query = `
+      ${SPARQL.getSPARQLPrefixes()}
+      select * where {
+        {?s ?p <${uri}> .}
+        UNION {<${uri}> ?p2 ?o.}
+      } LIMIT 1`;
+
+    let existed = false;
+    await GraphDB.sendSelectQuery(query, false, () => {
+      existed = true;
+    }, repository);
+    return existed;
+  },
+  isURIExistedAsSubject: async (uri: string, repository?: GDBRepository) => {
+    if (!uri.includes("://")) {
+      uri = SPARQL.getFullURI(uri);
+    }
+    const query = `
+      ${SPARQL.getSPARQLPrefixes()}
+      select * where {
+        <${uri}> ?p ?o .
+      } LIMIT 1`;
+
+    let existed = false;
+    await GraphDB.sendSelectQuery(query, false, () => {
+      existed = true;
+    }, repository);
+    return existed;
+  },
+  isURIExistedAsObject: async (uri: string, repository?: GDBRepository) => {
+    if (!uri.includes("://")) {
+      uri = SPARQL.getFullURI(uri);
+    }
+    const query = `
+      ${SPARQL.getSPARQLPrefixes()}
+      select * where {
+        ?s ?p <${uri}> .
+      } LIMIT 1`;
+
+    let existed = false;
+    await GraphDB.sendSelectQuery(query, false, () => {
+      existed = true;
+    }, repository);
+    return existed;
+  }
 }

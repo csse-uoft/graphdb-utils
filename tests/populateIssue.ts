@@ -66,6 +66,7 @@ export function PopulateIssue(repository: any) {
             await indicator1.save();
             outcome.indicators = [indicator1];
             await outcome.save();
+            await GDBOrganizationModel.find({});
             const outcomes = await GDBOutcomeModel.find({_uri: outcome._uri}, {populates: ['indicators.unitOfMeasure']})
             expect(await GDBOutcomeModel.find({}, {populates: ['indicators']}));
             const result = await GDBOutcomeModel.find({});

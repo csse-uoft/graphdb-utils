@@ -1,4 +1,4 @@
-import {createGraphDBModel, DeleteType, GraphDBModelConstructor} from "../src";
+import {createGraphDBModel, DeleteType, GraphDBModelConstructor, GraphDB} from "../src";
 import {expect} from "chai";
 
 export function basics(repository: any) {
@@ -38,12 +38,18 @@ export function basics(repository: any) {
     });
 
     it('should create a document with uri', async function () {
+      const personUri = 'http://test/person/1';
       const person1 = PersonModel({
         familyName: 'last name',
         givenName: 'first name',
         gender: 'male'
-      }, {uri: "http://test/person/1"});
+      }, {uri: personUri});
       await person1.save();
+
+      expect(await GraphDB.isURIExisted(personUri)).true;
+      expect(await GraphDB.isURIExistedAsSubject(personUri)).true;
+      expect(await GraphDB.isURIExistedAsObject(personUri)).false;
+      expect(await GraphDB.isURIExisted(personUri + '1')).false;
     });
 
     it('should modify a document with uri', async function () {
