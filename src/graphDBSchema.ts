@@ -96,14 +96,16 @@ export function createGraphDBModel(schema: GraphDBSchema, schemaOptions: SchemaO
           nestedModel = getModel(options.type) as GraphDBModel;
         }
         nestedModel._preload(iteratedCache);
-        for (const nestedRdfType of nestedModel.schemaOptions.rdfTypes) {
-          if (nestedRdfType === Types.NamedIndividual || nestedRdfType === SPARQL.getFullURI(Types.NamedIndividual)) continue;
-          if (nestedRdfType.includes("://"))
-            nestedType2Model.set(nestedRdfType, nestedModel);
-          else
-            nestedType2Model.set(SPARQL.getFullURI(nestedRdfType), nestedModel);
-        }
 
+        const nestedRdfTypes = nestedModel.schemaOptions.rdfTypes
+          .filter((rdfType: string) => rdfType !== Types.NamedIndividual)
+          .map((rdfType: string) => {
+            if (rdfType.includes("://")) {
+              return rdfType
+            }
+            return SPARQL.getFullURI(rdfType);
+          });
+        nestedType2Model.set(nestedRdfTypes, nestedModel);
       }
     }
 
@@ -134,11 +136,15 @@ class Uri2ModelMap {
   /**
    * Recursively find the model by URI.
    */
-  public get(uri: string, iterated = new Set()) {
+  public get(uri: string | string[], iterated = new Set()) {
     if (iterated.has(this)) {
       return;
     }
     iterated.add(this);
+
+    if (Array.isArray(uri)) {
+      uri = uri.sort().join('+');
+    }
 
     if (this.map.has(uri)) {
       return this.map.get(uri);
@@ -147,8 +153,12 @@ class Uri2ModelMap {
     }
   }
 
-  public set(uri: string, model: GraphDBModel) {
-    this.map.set(uri, model);
+  public set(uri: string | string[], model: GraphDBModel) {
+    if (Array.isArray(uri)) {
+      this.map.set(uri.sort().join('+'), model);
+    } else {
+      this.map.set(uri, model);
+    }
   }
 
   private _getFromNestedModels(uri: string, iterated = new Set()) {
