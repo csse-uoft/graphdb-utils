@@ -11,25 +11,34 @@ export function doubleRDFTypes(repository: any) {
             GDBOrganizationModel = createGraphDBModel({
                 comment: {type: String, internalKey: 'rdfs:comment'},
             }, {
-                rdfTypes: ['cids:Organization'], name: 'organization'
+                rdfTypes: ['cids:Organization2'], name: 'organization2'
             });
 
             GDBStakeholerModel = createGraphDBModel({
+                name: {type: String, internalKey: 'cids:hasName'},
+                comment: {type: String, internalKey: 'rdfs:comment'},
             },{
-                rdfTypes: ['cids:Organization', 'cids:Stakeholder'], name: 'stakeholder'
+                rdfTypes: ['cids:Organization2', 'cids:Stakeholder'], name: 'stakeholder'
             })
         })
-
-
 
         it('should create a stakeholder and fetch it out', async function () {
 
             const stakeholer = GDBStakeholerModel({
+                name: "Test",
+                comment: "comment-test"
             }, {uri: 'https://stakeholder.ca'});
             await stakeholer.save();
 
-            expect(await GDBOrganizationModel.find({})).length(5);
-            expect(await GDBStakeholerModel.find({})).length(1)
+            const organizations = await GDBOrganizationModel.find({});
+            expect(organizations).length(1);
+            expect(organizations[0].comment).eq('comment-test')
+
+            const stakeholders = await GDBStakeholerModel.find({});
+            expect(stakeholders).length(1);
+            expect(stakeholders[0].name).eq('Test')
+            expect(stakeholders[0].comment).eq('comment-test')
+
         });
     }
 }

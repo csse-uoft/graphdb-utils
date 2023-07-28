@@ -272,5 +272,12 @@ export function basics(repository: any) {
       expect(await Person.find({})).length(0);
       expect(await PhoneNumber.find({})).length(0);
     });
+
+    it('should get empty documents', async function () {
+      const EmptyModel = createGraphDBModel({
+      }, {rdfTypes: [':Empty'], name: 'empty'});
+      await EmptyModel({}).save();
+      expect(await EmptyModel.find({})).length(1);
+    });
   }
 }

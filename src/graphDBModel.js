@@ -498,6 +498,8 @@ class GraphDBModel {
     const topInstances = rdfType2Subjects.get(SPARQL.getFullURI(topInstanceType)) || [];
     for (const subject of topInstances) {
       for (const [predicate, objects] of subject2Triples.get(subject) || []) {
+        if (!data[subject]) data[subject] = {};
+
         const option = this.internalKey2Option.get(predicate);
         // ignore unknown predicates
         if (!option) continue;
@@ -506,7 +508,6 @@ class GraphDBModel {
           const objectJS = graphDBValueToJsValue(object, Array.isArray(option.type) ? option.type[0] : option.type);
           const predicateJS = option.externalKey;
 
-          if (!data[subject]) data[subject] = {};
           if (Array.isArray(option.type)) {
             if (!data[subject][predicateJS]) data[subject][predicateJS] = [];
             data[subject][predicateJS].push(objectJS);
