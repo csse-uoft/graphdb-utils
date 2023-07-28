@@ -14,6 +14,7 @@ import {generateDeleteQuery} from "./generateDeleteQuery";
 import {MaxCallStackSize} from "./maxCall";
 import {RemoveIndicatorFromOrg} from "./removeIndicatorFromOrg";
 import {PopulateIssue} from "./populateIssue";
+import {doubleRDFTypes} from "./doubleRDFTypes";
 
 dotenv.config({path: `${__dirname}/.env`});
 
@@ -44,10 +45,11 @@ describe("GraphDB", function () {
       await GraphDB.sendUpdateQuery(`CLEAR DEFAULT`);
     });
   });
-  // describe('Basics', basics(repository));
-  // describe('Double Save', doubleSave(repository));
-  // describe('Delete Query', generateDeleteQuery(repository));
-  // describe('Max Call Stack', MaxCallStackSize(repository));
-  // describe('Remove Indicator From Org', RemoveIndicatorFromOrg(repository))
+  describe('Basics', basics(repository));
+  describe('Double Save', doubleSave(repository));
+  describe('Delete Query', generateDeleteQuery(repository));
+  describe('Max Call Stack', MaxCallStackSize(repository));
+  describe('Remove Indicator From Org', RemoveIndicatorFromOrg(repository))
   describe('PopulateIssue', PopulateIssue(repository))
+  describe('double RDFTypes', doubleRDFTypes(repository))
 });
