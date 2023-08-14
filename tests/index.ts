@@ -15,6 +15,7 @@ import {MaxCallStackSize} from "./maxCall";
 import {RemoveIndicatorFromOrg} from "./removeIndicatorFromOrg";
 import {PopulateIssue} from "./populateIssue";
 import {doubleRDFTypes} from "./doubleRDFTypes";
+import {filterForList} from "./filterForList";
 
 dotenv.config({path: `${__dirname}/.env`});
 
@@ -52,4 +53,5 @@ describe("GraphDB", function () {
   describe('Remove Indicator From Org', RemoveIndicatorFromOrg(repository))
   describe('PopulateIssue', PopulateIssue(repository))
   describe('double RDFTypes', doubleRDFTypes(repository))
+  describe('filter for lists', filterForList(repository))
 });
