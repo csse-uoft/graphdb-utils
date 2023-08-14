@@ -513,7 +513,6 @@ class GraphDBDocument {
           if (!initialData) {
             object._internal.isNew = true;
             object._internal.id = await (await getIdGenerator()).getNextCounter(nestedModel.schemaOptions.name);
-            nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ${nestedModel.schemaOptions.name}_${object._id}.`);
           } else {
             // We have the predicate set to something: a URI or {_uri, ...}
             if (typeof initialData === 'string') {

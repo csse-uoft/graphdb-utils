@@ -85,15 +85,11 @@ class GraphDBDocumentArray extends Array {
        * @type {Map<string, Map<string, Term[]>>}
        */
       const subject2Triples = new Map();
+
       /**
        * @type {Map<string, string[]>}
        */
-      const rdfType2Subjects = new Map();
-
-      /**
-       * @type {Map<string, string>}
-       */
-      const subject2RdfType = new Map();
+      const subject2RdfTypes = new Map();
 
       await GraphDB.sendConstructQuery(query, ({subject, predicate, object}) => {
 
@@ -102,12 +98,11 @@ class GraphDBDocumentArray extends Array {
         const objectValue = object.termType === 'NamedNode' ? object.value : object.value;
 
         if (predicate === "rdf:type" && object.termType === 'NamedNode' && object.value !== 'http://www.w3.org/2002/07/owl#NamedIndividual') {
-          if (rdfType2Subjects.has(object.value)) {
-            rdfType2Subjects.get(object.value).push(subject);
+          if (subject2RdfTypes.has(subject)) {
+            subject2RdfTypes.get(subject).push(object.value)
           } else {
-            rdfType2Subjects.set(object.value, [subject]);
+            subject2RdfTypes.set(subject, [object.value])
           }
-          subject2RdfType.set(subject, object.value)
         }
 
         if (!subject2Triples.has(subject)) {
@@ -122,27 +117,27 @@ class GraphDBDocumentArray extends Array {
       });
 
       // construct data object: uri -> {predicate: value, ...}
-      for (const [rdfType, subjects] of rdfType2Subjects) {
-        const nestedModel = getModel(this[0].model.nestedType2Model.get(rdfType));
+      for (const [subject, rdfTypes] of subject2RdfTypes.entries()) {
+        const nestedModel = getModel(this[0].model.nestedType2Model.get(rdfTypes));
+
         // ignore unknown rdf:type
         if (!nestedModel) continue;
 
-        for (const subject of subjects) {
-          for (const [predicate, objects] of subject2Triples.get(subject) || []) {
-            const option = nestedModel.internalKey2Option.get(predicate);
-            // ignore unknown predicates
-            if (!option) continue;
-            for (const object of objects || []) {
-              const objectJS = graphDBValueToJsValue(object, Array.isArray(option.type) ? option.type[0] : option.type);
-              const predicateJS = option.externalKey;
+        if (!data[subject]) data[subject] = {};
 
-              if (!data[subject]) data[subject] = {};
-              if (Array.isArray(option.type)) {
-                if (!data[subject][predicateJS]) data[subject][predicateJS] = [];
-                data[subject][predicateJS].push(objectJS);
-              } else {
-                data[subject][predicateJS] = objectJS;
-              }
+        for (const [predicate, objects] of subject2Triples.get(subject) || []) {
+          const option = nestedModel.internalKey2Option.get(predicate);
+          // ignore unknown predicates
+          if (!option) continue;
+          for (const object of objects || []) {
+            const objectJS = graphDBValueToJsValue(object, Array.isArray(option.type) ? option.type[0] : option.type);
+            const predicateJS = option.externalKey;
+
+            if (Array.isArray(option.type)) {
+              if (!data[subject][predicateJS]) data[subject][predicateJS] = [];
+              data[subject][predicateJS].push(objectJS);
+            } else {
+              data[subject][predicateJS] = objectJS;
             }
           }
         }
@@ -156,8 +151,8 @@ class GraphDBDocumentArray extends Array {
           // Skip undefined/empty predicate
           if (instanceUris == null) continue;
 
-          const rdfType = subject2RdfType.get((Array.isArray(instanceUris) ? instanceUris[0] : instanceUris));
-          const nestedModel = getModel(doc.model.nestedType2Model.get(rdfType));
+          const rdfTypes = subject2RdfTypes.get((Array.isArray(instanceUris) ? instanceUris[0] : instanceUris));
+          const nestedModel = getModel(doc.model.nestedType2Model.get(rdfTypes));
 
           if (!nestedModel) {
             console.error('Cannot populate: ', instanceUris.toString(), 'Model not found.');

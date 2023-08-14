@@ -463,24 +463,12 @@ class GraphDBModel {
      * @type {Map<string, Map<string, Term[]>>}
      */
     const subject2Triples = new Map();
-    /**
-     * @type {Map<string, string[]>}
-     */
-    const rdfType2Subjects = new Map();
 
     await GraphDB.sendConstructQuery(query, ({subject, predicate, object}) => {
-
+      // Notes: The result contains only one subject.
       subject = subject.value;
       predicate = SPARQL.getPrefixedURI(predicate.value);
       const objectValue = object.termType === 'NamedNode' ? object.value : object.value;
-
-      if (predicate === "rdf:type" && object.termType === 'NamedNode' && object.value !== 'http://www.w3.org/2002/07/owl#NamedIndividual') {
-        if (rdfType2Subjects.has(object.value)) {
-          rdfType2Subjects.get(object.value).push(subject);
-        } else {
-          rdfType2Subjects.set(object.value, [subject]);
-        }
-      }
 
       if (!subject2Triples.has(subject)) {
         subject2Triples.set(subject, new Map([[predicate, [objectValue]]]));
@@ -494,12 +482,10 @@ class GraphDBModel {
     });
 
     // construct data object: uri -> {predicate: value, ...}
-    const topInstanceType = this.schemaOptions.rdfTypes.filter(type => type !== 'owl:NamedIndividual')[0];
-    const topInstances = rdfType2Subjects.get(SPARQL.getFullURI(topInstanceType)) || [];
-    for (const subject of topInstances) {
-      for (const [predicate, objects] of subject2Triples.get(subject) || []) {
-        if (!data[subject]) data[subject] = {};
+    for (const subject of subject2Triples.keys()) {
+      if (!data[subject]) data[subject] = {};
 
+      for (const [predicate, objects] of subject2Triples.get(subject) || []) {
         const option = this.internalKey2Option.get(predicate);
         // ignore unknown predicates
         if (!option) continue;
