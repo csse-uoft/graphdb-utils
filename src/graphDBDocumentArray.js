@@ -156,6 +156,8 @@ class GraphDBDocumentArray extends Array {
 
           if (!nestedModel) {
             console.error('Cannot populate: ', instanceUris.toString(), 'Model not found.');
+            doc.set(path, undefined);
+            continue;
           }
 
           let newValue;
