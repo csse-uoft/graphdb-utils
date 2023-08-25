@@ -456,6 +456,10 @@ class GraphDBDocument {
 
     for (const [index, key] of [...this.modified].entries()) {
       const option = this.externalKey2Option.get(key);
+      if (option == null) {
+        throw Error(`Unknown key ${key} in model ${this.model.schemaOptions.name}`);
+      }
+
       let value = data[key];
 
       // Skip undefined value
