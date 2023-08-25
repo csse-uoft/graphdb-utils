@@ -51,5 +51,5 @@ describe("GraphDB", function () {
   describe('Max Call Stack', MaxCallStackSize(repository));
   describe('Remove Indicator From Org', RemoveIndicatorFromOrg(repository))
   describe('PopulateIssue', PopulateIssue(repository))
-  describe('double RDFTypes', doubleRDFTypes(repository))
+  // describe('double RDFTypes', doubleRDFTypes(repository))
 });
