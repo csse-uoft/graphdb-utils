@@ -566,7 +566,7 @@ class GraphDBDocument {
           const newUris = value.map(doc => doc._uri);
           let cnt = 0;
           for (const oldDoc of this.initialData[key]) {
-            if (!newUris.includes(oldDoc._uri)) {
+            if (oldDoc instanceof GraphDBDocument && !newUris.includes(oldDoc._uri)) {
               const {where} = oldDoc.model.generateDeleteQuery(oldDoc, cnt++);
               deleteClause.push(where);
             }
