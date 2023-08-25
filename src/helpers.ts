@@ -35,6 +35,18 @@ export const SPARQL = {
     },
 
     /**
+     * Ensure the uri is a full URI.
+     * @param prefixedURIOrFullURI {string}
+     */
+    ensureFullURI: (prefixedURIOrFullURI: string) => {
+        if (prefixedURIOrFullURI.includes("://")) {
+            return prefixedURIOrFullURI;
+        } else {
+            return SPARQL.getFullURI(prefixedURIOrFullURI);
+        }
+    },
+
+    /**
      * Get prefixed URI.
      * i.e. cp:Client
      * @param fullURI {string}
@@ -48,6 +60,18 @@ export const SPARQL = {
         }
         console.log(`${fullURI} does not match any prefixes.`)
         return null;
+    },
+
+    /**
+     * Ensure the uri is a prefixed URI.
+     * @param prefixedURIOrFullURI {string}
+     */
+    ensurePrefixedURI: (prefixedURIOrFullURI: string) => {
+        if (!prefixedURIOrFullURI.includes("://")) {
+            return prefixedURIOrFullURI;
+        } else {
+            return SPARQL.getPrefixedURI(prefixedURIOrFullURI);
+        }
     },
     /**
      *
