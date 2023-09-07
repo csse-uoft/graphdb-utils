@@ -22,17 +22,20 @@ export function filterForList(repository: any) {
       })
     })
 
-    it('the outcome should not be fetched', async function () {
+    it('should fetch nested instance by uri', async function () {
 
       const outcome = GDBOutcomeModel({
         name: "Test",
-        themes: []
+        themes: [{
+          _uri: 'http://theme'
+        }]
       });
       await outcome.save();
 
-      const outcomes = await GDBOutcomeModel.find({theme: 'http://theme'});
-      expect(outcomes).length(0);
-
+      const outcomes = await GDBOutcomeModel.find({themes: {_uri: 'http://theme'}});
+      expect(outcomes).length(1);
+      const outcomes2 = await GDBOutcomeModel.find({themes: {_uri: 'http://theme2'}});
+      expect(outcomes2).length(0);
     });
   }
 }
