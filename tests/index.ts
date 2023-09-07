@@ -16,6 +16,7 @@ import {RemoveIndicatorFromOrg} from "./removeIndicatorFromOrg";
 import {PopulateIssue} from "./populateIssue";
 import {doubleRDFTypes} from "./doubleRDFTypes";
 import {filterForList} from "./filterForList";
+import {emptyInstance} from "./emptyInstance";
 
 dotenv.config({path: `${__dirname}/.env`});
 
@@ -54,4 +55,5 @@ describe("GraphDB", function () {
   describe('PopulateIssue', PopulateIssue(repository))
   describe('double RDFTypes', doubleRDFTypes(repository))
   describe('filter for lists', filterForList(repository))
+  describe('Empty instance', emptyInstance(repository))
 });
