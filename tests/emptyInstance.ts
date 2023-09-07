@@ -73,5 +73,18 @@ export function emptyInstance(repository: any) {
 
       // Note: Populate should not work in this case
     });
+
+    it('should create empty instance', async  function () {
+      await PersonModel.findAndDelete({});
+      await OrganizationModel.findAndDelete({});
+
+      const org = OrganizationModel({}, {});
+      await org.save();
+      const org2 = OrganizationModel({}, {uri: "http://orgTest2"});
+      await org2.save();
+
+      const orgs = await OrganizationModel.find({});
+      expect(orgs).length(2);
+    });
   }
 }
