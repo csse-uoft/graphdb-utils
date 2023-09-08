@@ -22,7 +22,7 @@
   "homepage": "https://github.com/csse-uoft/graphdb-utils#readme",
   "dependencies": {
     "form-data": "^4.0.0",
-    "graphdb": "^3.0.0",
+    "graphdb": "^3.0.1",
     "mongoose": "^6.9.0",
     "node-fetch": "^3.3.0",
     "redis": "^4.6.4",

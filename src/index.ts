@@ -8,3 +8,4 @@ export * from "./graphDBError"
 export * from "./namespaces";
 export * from "./helpers";
 export * from "./idGenerator";
+export * from "./transaction";

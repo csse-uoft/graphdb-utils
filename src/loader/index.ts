@@ -1,6 +1,8 @@
 import {addNamespace, namespaces} from "../namespaces";
 import {createRepository} from "./utils";
 import {IDGenerator} from "../idGenerator/base";
+import RDFRepositoryClientType from "graphdb/lib/repository/rdf-repository-client";
+
 const {GraphDBServerClient, ServerClientConfig} = require('graphdb').server;
 
 const {RepositoryClientConfig, RDFRepositoryClient, RepositoryConfig, RepositoryType} = require('graphdb').repository;
@@ -11,7 +13,7 @@ const {sleep} = require('../utils');
 export * from "./utils";
 export * from "./graphDBRepositoryConfig";
 
-export let repository: typeof RDFRepositoryClient;
+export let repository: RDFRepositoryClientType;
 
 let dbClient: any
 export let idGenerator: IDGenerator;

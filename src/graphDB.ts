@@ -4,6 +4,7 @@ import {GraphDBError} from "./graphDBError";
 
 import {Term} from '@rdfjs/types';
 import {streamToString} from "./utils";
+import {Transaction} from "./transaction";
 
 const {GetQueryPayload, QueryType, UpdateQueryPayload} = require('graphdb').query;
 const {RDFMimeType, QueryContentType} = require('graphdb').http;
@@ -25,7 +26,7 @@ type GDBRepository = any; // RDFRepositoryClient or BaseRepositoryClient
 
 export const GraphDB = {
   sendSelectQuery: async (query: string, inference = false, onData: onDataCb, repository?: GDBRepository) => {
-    repository = repository || await getRepository();
+    repository = Transaction.client ? Transaction.client : repository || await getRepository();
 
     const payload = new GetQueryPayload()
       .setQuery(query)
@@ -52,7 +53,7 @@ export const GraphDB = {
   },
 
   sendUpdateQuery: async (query: string, repository?: GDBRepository) => {
-    repository = repository || await getRepository();
+    repository = Transaction.client ? Transaction.client : repository || await getRepository();
 
     const time = Date.now();
     console.log(`------ Update query: ------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
@@ -72,7 +73,7 @@ export const GraphDB = {
   },
 
   sendConstructQuery: async (query: string, onData: onDataCb, inference = false, repository?: GDBRepository) => {
-    repository = repository || await getRepository();
+    repository = Transaction.client ? Transaction.client : repository || await getRepository();
 
     const time = Date.now();
     console.log(`------ Construct query: -------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
@@ -82,7 +83,7 @@ export const GraphDB = {
       .setQueryType(QueryType.CONSTRUCT)
       .setResponseType(RDFMimeType.JSON_LD)
       .setInference(inference)
-      .setTimeout(5);
+      // .setTimeout(5);
 
     try {
       const stream = await repository.query(payload);
