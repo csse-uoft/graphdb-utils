@@ -141,15 +141,6 @@ class GraphDBModel {
     for (const [index, [key, val]] of Object.entries(data).entries()) {
       if (this.externalKey2Option.has(key)) {
         const options = this.externalKey2Option.get(key);
-
-        // Pre-process Types.Self. Replace Types.Self to this model.
-        if (options.type === Types.Self) {
-          options.type = this;
-        }
-        if (Array.isArray(options.type) && options.type[0] === Types.Self) {
-          options.type[0] = this;
-        }
-
         // TODO: Data validations
         // skip keys without value
         if (val == null || (Array.isArray(val) && val.length === 0) || val === '') {

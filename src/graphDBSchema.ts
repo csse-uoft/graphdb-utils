@@ -11,7 +11,7 @@ export type GraphDBModelConstructor =
   GraphDBModel
   & ((data: object, options?: object) => GraphDBDocument & { [key: string]: GDBBaseValueType });
 export type GDBType = StringConstructor | NumberConstructor | DateConstructor | BooleanConstructor
-  | string | 'owl:NamedIndividual' | 'GraphDB.Self!' | GraphDBModelConstructor | (() => GraphDBModelConstructor);
+  | string | 'owl:NamedIndividual' | GraphDBModelConstructor | (() => GraphDBModelConstructor);
 
 
 export interface SchemaOptions {

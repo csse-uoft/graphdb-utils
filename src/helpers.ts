@@ -106,9 +106,7 @@ export const Types = {
     String,
     Number,
     Date,
-    Boolean,
-    // Refers to the model itself
-    Self: 'GraphDB.Self!' // `GraphDB.Self` is some special value that is not used anywhere.
+    Boolean
 };
 
 export const Comparison = {$ne: "", $ge: ">=", $le: "<=", $gt: ">", $lt: "<"};
