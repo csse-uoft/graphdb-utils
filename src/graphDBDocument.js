@@ -1,17 +1,12 @@
 const {GraphDB, getGraphDBAttribute} = require('./graphDB');
 const {
-  deepAssign,
   isModel,
   getModel,
-  isGraphDBDocument,
-  getIdFromIdentifier,
   Types,
   valToGraphDBValue,
-  pathsToObj,
   SPARQL, DeleteType
 } = require('./helpers');
-const {idGenerator} = require('./loader/index');
-const {getIdGenerator} = require("./loader");
+const {getIdGenerator, getRepository} = require("./loader");
 
 
 /**
@@ -429,7 +424,7 @@ class GraphDBDocument {
   }
 
   // Save the document
-  async save(iteratedCache = new Set()) {
+  async save(ignoreTransaction = false, iteratedCache = new Set()) {
     if (iteratedCache.has(this)) {
       return;
     }
@@ -533,7 +528,7 @@ class GraphDBDocument {
         nestedDeleteClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} ?o${index}.`);
         nestedInsertClause.push(`${uri} ${SPARQL.getPredicate(option.internalKey)} <${object._uri}>.`);
 
-        await object.save(iteratedCache);
+        await object.save(ignoreTransaction, iteratedCache);
         return {object, nestedInsertClause, nestedDeleteClause};
       }
 
@@ -599,7 +594,7 @@ class GraphDBDocument {
 
     const query = `${SPARQL.getSPARQLPrefixes()}\n${deleteStatement}INSERT DATA {\n\t${insertClause.join('\n\t')}\n}`
     // console.log(query)
-    await GraphDB.sendUpdateQuery(query);
+    await GraphDB.sendUpdateQuery(query, ignoreTransaction ? await getRepository() : undefined);
     this.modified.clear();
     this._internal.isNew = false;
     this._updateInitialData(data);

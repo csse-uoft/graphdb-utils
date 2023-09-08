@@ -1,6 +1,7 @@
 const {GraphDBDocument} = require('./graphDBDocument');
 const {GraphDB, getGraphDBAttribute} = require('./graphDB');
 const {getModel, pathsToObj, graphDBValueToJsValue, SPARQL} = require('./helpers');
+const {getRepository} = require("./loader");
 
 const generateQuery = (doc, populate, cnt = 0) => {
   const whereClause = [], paths = [];
@@ -45,19 +46,21 @@ class GraphDBDocumentArray extends Array {
   /**
    * populate a single property for every document.
    * @param {string} path - e.g. 'primary_contact'
+   * @param {boolean} [ignoreTransaction=false] - whether to ignore transaction
    * @return {Promise<GraphDBDocumentArray>}
    */
-  async populate(path) {
-    return this.populateMultiple([path]);
+  async populate(path, ignoreTransaction = false) {
+    return this.populateMultiple([path], ignoreTransaction);
   }
 
   /**
    * Populate multiple properties for every document.
    * Breadth first populate for combining queries.
    * @param {string[]} paths - e.g. ['primary_contact', 'organization']
+   * @param {boolean} [ignoreTransaction=false] - whether to ignore transaction
    * @return {Promise<GraphDBDocumentArray>}
    */
-  async populateMultiple(paths) {
+  async populateMultiple(paths, ignoreTransaction = false) {
     paths = [...paths];
     paths.sort();
     const populate = pathsToObj(paths);
@@ -114,7 +117,7 @@ class GraphDBDocumentArray extends Array {
             subject2Triples.get(subject).get(predicate).push(objectValue);
           }
         }
-      });
+      }, false, ignoreTransaction ? await getRepository() : undefined);
 
       // construct data object: uri -> {predicate: value, ...}
       for (const [subject, rdfTypes] of subject2RdfTypes.entries()) {

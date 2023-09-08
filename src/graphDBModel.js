@@ -4,6 +4,7 @@ const {GraphDBDocument} = require('./graphDBDocument');
 const {
   Types, Comparison, stringToSpaces, valToGraphDBValue, graphDBValueToJsValue, objToPath, isModel, DeleteType, SPARQL
 } = require('./helpers');
+const {getRepository} = require("./loader");
 
 /**
  * Create a document based on the model.
@@ -400,7 +401,7 @@ class GraphDBModel {
   /**
    * Find documents from the model.
    * @param {{}} filter
-   * @param {{populates}} options
+   * @param {{populates?, ignoreTransaction?: boolean}} [options]
    * @return {Promise.<GraphDBDocumentArray>} The found documents.
    * @memberOf {GraphDBModel}
    * @example
@@ -444,7 +445,7 @@ class GraphDBModel {
    */
   async find(filter, options = {}) {
     this._preload();
-    const {populates = []} = options;
+    const {populates = [], ignoreTransaction} = options;
     const {query} = this.generateFindQuery(filter, {populates});
 
     const data = {};
@@ -470,7 +471,7 @@ class GraphDBModel {
           subject2Triples.get(subject).get(predicate).push(objectValue);
         }
       }
-    });
+    }, false, ignoreTransaction ? await getRepository() : undefined);
 
     // construct data object: uri -> {predicate: value, ...}
     for (const subject of subject2Triples.keys()) {
@@ -514,7 +515,7 @@ class GraphDBModel {
     }
 
     if (paths.length > 0)
-      await resultInArray.populateMultiple(paths);
+      await resultInArray.populateMultiple(paths, ignoreTransaction);
 
     return resultInArray;
   }
@@ -522,7 +523,7 @@ class GraphDBModel {
   /**
    * Find a document by ID in the model.
    * @param {string|number} id - ID of the document, usually represents as `_id`
-   * @param {{populates}} [options]
+   * @param {{populates?, ignoreTransaction?: boolean}} [options]
    * @return {Promise<GraphDBDocument>}
    * @see {@link GraphDBModel.find} for further information
    * @example
@@ -543,7 +544,7 @@ class GraphDBModel {
   /**
    * Find a document by URI in the model.
    * @param {string} uri - ID of the document, usually represents as `_id`
-   * @param {{populates}} [options]
+   * @param {{populates?, ignoreTransaction?: boolean}} [options]
    * @return {Promise<GraphDBDocument>}
    * @see {@link GraphDBModel.find} for further information
    * @example
@@ -564,7 +565,7 @@ class GraphDBModel {
   /**
    * Find one document in the model.
    * @param {{}} filter - The filter
-   * @param {{populates}} [options]
+   * @param {{populates?, ignoreTransaction?: boolean}} [options]
    * @return {Promise<GraphDBDocument>}
    * @see {@link GraphDBModel.find} for further information
    * @example
@@ -585,6 +586,7 @@ class GraphDBModel {
    *
    * @param {{}} filter - The filter
    * @param {{}} update - The Update to the found document
+   * @param {{ignoreTransaction?: boolean}} [options]
    * @return {Promise<GraphDBDocument>}
    *
    * @example
@@ -594,17 +596,17 @@ class GraphDBModel {
    * const doc = await Model.findOneAndUpdate({_id: 1}, {primary_contact: {first_name: 'Lester'}});
    * ```
    */
-  async findOneAndUpdate(filter, update) {
+  async findOneAndUpdate(filter, update, options) {
 
     // Remove fields that are not in the schema.
     this.cleanData(update);
 
     // Find one
-    const resultDoc = await this.findOne(filter);
+    const resultDoc = await this.findOne(filter, options);
 
     if (resultDoc) {
       Object.assign(resultDoc, update);
-      await resultDoc.save();
+      await resultDoc.save(options?.ignoreTransaction);
     }
 
     return resultDoc;
@@ -614,6 +616,7 @@ class GraphDBModel {
    * Find one document by ID and update
    * @param {string|number} id - The identifier
    * @param {{}} update -  The Update to the found document
+   * @param {{ignoreTransaction?: boolean}} [options]
    * @return {Promise<GraphDBDocument>}
    * @example
    * ```js
@@ -621,14 +624,15 @@ class GraphDBModel {
    * const doc = await Model.findByIdAndUpdate(1, {primary_contact: {first_name: 'Lester'}});
    * ```
    */
-  async findByIdAndUpdate(id, update) {
-    return await this.findOneAndUpdate({_id: id}, update);
+  async findByIdAndUpdate(id, update, options) {
+    return await this.findOneAndUpdate({_id: id}, update, options);
   }
 
   /**
    * Find one document by URI and update
    * @param {string} uri - The unique identifier
    * @param {{}} update -  The Update to the found document
+   * @param {{ignoreTransaction?: boolean}} [options]
    * @return {Promise<GraphDBDocument>}
    * @example
    * ```js
@@ -636,14 +640,15 @@ class GraphDBModel {
    * const doc = await Model.findByUriAndUpdate("http://example.com/person/1", {primary_contact: {first_name: 'Lester'}});
    * ```
    */
-  async findByUriAndUpdate(uri, update) {
-    return await this.findOneAndUpdate({_uri: uri}, update);
+  async findByUriAndUpdate(uri, update, options) {
+    return await this.findOneAndUpdate({_uri: uri}, update, options);
   }
 
   /**
    * Find all documents matched to the filter and delete.
    * @param {{}} filter - The filter.
    * @return {Promise<GraphDBDocumentArray>} - The deleted Documents.
+   * @param {{ignoreTransaction?: boolean}} [options]
    * @memberOf {GraphDBModel}
    * @example
    * ```js
@@ -651,9 +656,9 @@ class GraphDBModel {
    * const doc = await Model.findAndDelete({primary_contact: {first_name: 'Lester'}});
    * ```
    */
-  async findAndDelete(filter) {
+  async findAndDelete(filter, options) {
     const populates = this.getCascadePaths();
-    const docs = await this.find(filter, {populates});
+    const docs = await this.find(filter, {...options, populates});
     const whereClause = [];
     let cnt = 0;
     for (const doc of docs) {
@@ -670,14 +675,14 @@ class GraphDBModel {
 
     query = `${SPARQL.getSPARQLPrefixes()}\n${query}`;
 
-    await GraphDB.sendUpdateQuery(query);
+    await GraphDB.sendUpdateQuery(query, options?.ignoreTransaction ? await getRepository() : undefined);
     return docs;
   }
 
   /**
    * Find one document matched to the filter and delete.
-   * @param {{}} filter - The filter
-   * @return {Promise<GraphDBDocument|undefined>} - The deleted document.
+   * @param {{}} filter - The filter   * @return {Promise<GraphDBDocument|undefined>} - The deleted document.
+   * @param {{ignoreTransaction: boolean}} [options]
    * @example
    * ```js
    * // Find one document have primary_contact.first_name equal to 'Lester' and delete it.
@@ -685,18 +690,19 @@ class GraphDBModel {
    * const doc = await Model.findOneAndDelete({primary_contact: {first_name: 'Lester'}});
    * ```
    */
-  async findOneAndDelete(filter) {
+  async findOneAndDelete(filter, options) {
     const populates = this.getCascadePaths();
-    const doc = await this.findOne(filter, {populates});
+    const doc = await this.findOne(filter, {...options, populates});
     if (!doc) return;
     const query = this.generateDeleteQuery(doc).query;
-    await GraphDB.sendUpdateQuery(query);
+    await GraphDB.sendUpdateQuery(query, options?.ignoreTransaction ? await getRepository() : undefined);
     return doc;
   }
 
   /**
    * Find one document by ID and delete it.
    * @param {string|number} id - The identifier
+   * @param {{ignoreTransaction: boolean}} [options]
    * @return {Promise<GraphDBDocument>} - The deleted document.
    * @example
    * ```js
@@ -704,13 +710,14 @@ class GraphDBModel {
    *  const doc = await Model.findByIdAndDelete(1);
    * ```
    */
-  async findByIdAndDelete(id) {
-    return this.findOneAndDelete({_id: id});
+  async findByIdAndDelete(id, options) {
+    return this.findOneAndDelete({_id: id}, options);
   }
 
   /**
    * Find one document by URI and delete it.
    * @param {string} uri - The identifier
+   * @param {{ignoreTransaction: boolean}} [options]
    * @return {Promise<GraphDBDocument>} - The deleted document.
    * @example
    * ```js
@@ -718,8 +725,8 @@ class GraphDBModel {
    *  const doc = await Model.findByUriAndDelete("http://example.com/person/1");
    * ```
    */
-  async findByUriAndDelete(uri) {
-    return this.findOneAndDelete({_uri: uri});
+  async findByUriAndDelete(uri, options) {
+    return this.findOneAndDelete({_uri: uri}, options);
   }
 }
 

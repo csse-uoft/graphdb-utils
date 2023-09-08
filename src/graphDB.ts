@@ -26,7 +26,7 @@ type GDBRepository = any; // RDFRepositoryClient or BaseRepositoryClient
 
 export const GraphDB = {
   sendSelectQuery: async (query: string, inference = false, onData: onDataCb, repository?: GDBRepository) => {
-    repository = Transaction.client ? Transaction.client : repository || await getRepository();
+    repository = repository || (Transaction.client ? Transaction.client : await getRepository());
 
     const payload = new GetQueryPayload()
       .setQuery(query)
@@ -53,7 +53,7 @@ export const GraphDB = {
   },
 
   sendUpdateQuery: async (query: string, repository?: GDBRepository) => {
-    repository = Transaction.client ? Transaction.client : repository || await getRepository();
+    repository = repository || (Transaction.client ? Transaction.client : await getRepository());
 
     const time = Date.now();
     console.log(`------ Update query: ------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
@@ -73,7 +73,7 @@ export const GraphDB = {
   },
 
   sendConstructQuery: async (query: string, onData: onDataCb, inference = false, repository?: GDBRepository) => {
-    repository = Transaction.client ? Transaction.client : repository || await getRepository();
+    repository = repository || (Transaction.client ? Transaction.client : await getRepository());
 
     const time = Date.now();
     console.log(`------ Construct query: -------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
