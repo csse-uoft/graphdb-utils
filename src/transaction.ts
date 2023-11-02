@@ -19,6 +19,7 @@ TransactionalRepositoryClient.prototype.query = function (payload: any) {
 
 export class Transaction {
   static client: TransactionalRepositoryClient | undefined;
+  static active = !!Transaction.client
   static TransactionIsolationLevel = TransactionIsolationLevel;
   static async beginTransaction(isolationLevel?: TransactionIsolationLevel) {
     if (this.client) {
