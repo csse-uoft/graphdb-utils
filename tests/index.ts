@@ -18,7 +18,7 @@ import {doubleRDFTypes} from "./doubleRDFTypes";
 import {filterForList} from "./filterForList";
 import {emptyInstance} from "./emptyInstance";
 import {transaction} from "./transaction";
-import {updatingArray} from "./updatingArray";
+import {usingBoolean} from "./usingBoolean";
 
 dotenv.config({path: `${__dirname}/.env`});
 
@@ -42,6 +42,8 @@ describe("GraphDB", function () {
         address: process.env.GRAPHDB || "http://127.0.0.1:7200",
         namespaces,
         repositoryName: 'gdb-utils',
+        username: process.env.GRAPHDB_USERNAME,
+        password: process.env.GRAPHDB_PASSWORD
       });
       repository = result.repository;
     });
@@ -59,5 +61,5 @@ describe("GraphDB", function () {
   describe('filter for lists', filterForList(repository))
   describe('Empty instance', emptyInstance(repository))
   describe('Transactions', transaction(repository))
-  describe('updatingArrays', updatingArray(repository))
+  describe('usingBoolean', usingBoolean(repository))
 });
