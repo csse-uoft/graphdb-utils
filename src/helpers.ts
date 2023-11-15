@@ -1,5 +1,6 @@
 import {namespaces} from "./namespaces";
-import {GDBType} from "./graphDBSchema";
+import {GDBType, GraphDBModelConstructor} from "./graphDBSchema";
+import {getIdGenerator} from "./loader";
 
 // Stateless helpers
 
@@ -149,6 +150,17 @@ export function getModel(object: any) {
     return isModel(object);
 }
 
+export async function extractId(model: GraphDBModelConstructor, instanceUri: string): Promise<string|undefined> {
+    const re = new RegExp(`^${SPARQL.getFullURI(model.schemaOptions.name)}_(.*)$`);
+    const potentialIdMatch = instanceUri.match(re);
+    if (potentialIdMatch) {
+        const matchResult = potentialIdMatch[1].match((await getIdGenerator()).regex);
+        if (matchResult) {
+            return matchResult[0];
+        }
+    }
+}
+
 export const Helpers = {
     Types,
     DeleteType,
@@ -158,6 +170,7 @@ export const Helpers = {
     regexBuilder,
     isModel,
     getModel,
+    extractId,
     valToGraphDBValue: (val: any, type: GDBType) => {
         if (val == null) throw new Error('valToGraphDBValue: Val cannot be undefined');
 

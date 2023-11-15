@@ -2,7 +2,8 @@ const {getGraphDBAttribute, GraphDB} = require("./graphDB");
 const {GraphDBDocumentArray} = require("./graphDBDocumentArray");
 const {GraphDBDocument} = require('./graphDBDocument');
 const {
-  Types, Comparison, stringToSpaces, valToGraphDBValue, graphDBValueToJsValue, objToPath, isModel, DeleteType, SPARQL
+  Types, Comparison, stringToSpaces, valToGraphDBValue, graphDBValueToJsValue, objToPath, isModel, DeleteType, SPARQL,
+  extractId
 } = require('./helpers');
 const {getRepository} = require("./loader");
 
@@ -499,13 +500,8 @@ class GraphDBModel {
     const paths = objToPath(populates);
 
     for (const [uri, topInstance] of Object.entries(data)) {
-      let _id;
-      // use regex for accurate matching
-      const re = new RegExp(`^${SPARQL.getFullURI(this.schemaOptions.name)}_([0-9]*)$`);
-      const matchResult = uri.match(re);
-      if (matchResult) {
-        _id = matchResult[1];
-      }
+      // use regex for accurate matching for id
+      let _id = await extractId(this, uri);
       const doc = new GraphDBDocument({
         data: _id ? {_id, ...topInstance} : {...topInstance},
         model: this,

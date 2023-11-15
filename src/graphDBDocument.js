@@ -302,7 +302,7 @@ class GraphDBDocument {
 
   async generateId() {
     if (this._internal.id == null)
-      this._internal.id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
+      this._internal.id = await (await getIdGenerator()).getNextId(this.model.schemaOptions.name);
     return this._internal.id;
   }
 
@@ -314,7 +314,7 @@ class GraphDBDocument {
     // Both _id and uri is not provided, create a new URI with IDGenerator.
     else if (this._id == null && this._internal.uri == null) {
       const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
-      this._internal.id = await (await getIdGenerator()).getNextCounter(this.model.schemaOptions.name);
+      this._internal.id = await (await getIdGenerator()).getNextId(this.model.schemaOptions.name);
       this._internal.uri = `${baseUri}_${this._id}`;
     } else if (this._id != null) {
       const baseUri = SPARQL.getFullURI(this.schemaOptions.name);
@@ -511,7 +511,7 @@ class GraphDBDocument {
           // Create a new id for the nested instance if the predicate is not set initially
           if (!initialData) {
             object._internal.isNew = true;
-            object._internal.id = await (await getIdGenerator()).getNextCounter(nestedModel.schemaOptions.name);
+            object._internal.id = await (await getIdGenerator()).getNextId(nestedModel.schemaOptions.name);
           } else {
             // We have the predicate set to something: a URI or {_uri, ...}
             if (typeof initialData === 'string') {

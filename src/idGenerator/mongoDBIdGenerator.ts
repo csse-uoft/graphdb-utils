@@ -4,6 +4,7 @@ import {IDGenerator} from "./base";
 export class MongoDBIdGenerator implements IDGenerator {
     private conn: Connection;
     private model: any;
+    regex = /[0-9]+/;
 
     constructor(connectionString: string, options: any = {}) {
         // @ts-ignore
@@ -16,7 +17,7 @@ export class MongoDBIdGenerator implements IDGenerator {
         this.model = this.conn.model('GraphDBCounter', GraphDBCounterSchema);
     }
 
-    async getNextCounter(counterName: string): Promise<number> {
+    async getNextId(counterName: string): Promise<number> {
         const counter = await this.model.findOneAndUpdate({_id: counterName},
             {$inc: {seq: 1}}, {new: true, upsert: true});
         return counter.seq;

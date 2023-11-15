@@ -1,6 +1,6 @@
 const {GraphDBDocument} = require('./graphDBDocument');
-const {GraphDB, getGraphDBAttribute} = require('./graphDB');
-const {getModel, pathsToObj, graphDBValueToJsValue, SPARQL} = require('./helpers');
+const {GraphDB} = require('./graphDB');
+const {getModel, pathsToObj, graphDBValueToJsValue, SPARQL, extractId} = require('./helpers');
 const {getRepository} = require("./loader");
 
 const generateQuery = (doc, populate, cnt = 0) => {
@@ -170,13 +170,9 @@ class GraphDBDocumentArray extends Array {
               if (typeof instanceUri !== "string")
                 throw new Error("GraphDBDocument.populateMultiple: Internal Error 1");
 
-              let _id;
-              // use regex for accurate matching
-              const re = new RegExp(`^${SPARQL.getFullURI(nestedModel.schemaOptions.name)}_([0-9]*)$`);
-              const matchResult = instanceUri.match(re);
-              if (matchResult) {
-                _id = matchResult[1];
-              }
+              // use regex for accurate matching for id
+              let _id = await extractId(nestedModel, instanceUri);
+
               newValue.push(new GraphDBDocument({
                 data: _id ? {_id, ...data[instanceUri]} : {...data[instanceUri]},
                 model: nestedModel, uri: instanceUri
@@ -187,13 +183,9 @@ class GraphDBDocumentArray extends Array {
             if (typeof instanceUris !== "string")
               throw new Error("GraphDBDocument.populateMultiple: Error 1");
 
-            let _id;
-            // use regex for accurate matching
-            const re = new RegExp(`^${SPARQL.getFullURI(nestedModel.schemaOptions.name)}_([0-9]*)$`);
-            const matchResult = instanceUri.match(re);
-            if (matchResult) {
-              _id = matchResult[1];
-            }
+            // use regex for accurate matching for id
+            let _id = await extractId(nestedModel, instanceUri);
+
             newValue = new GraphDBDocument({
               data: _id ? {_id, ...data[instanceUri]} : {...data[instanceUri]},
               model: nestedModel, uri: instanceUri
