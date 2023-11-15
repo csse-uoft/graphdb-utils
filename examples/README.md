@@ -20,10 +20,12 @@ docker run --name mongo -p 27017:27017 --restart unless-stopped -d mongo:latest
 
 ## Initialize GraphDB Utils
 ```js
-const {GraphDB, initGraphDB, MongoDBIdGenerator, Types} = require("graphdb-utils");
+const {GraphDB, initGraphDB, MongoDBIdGenerator, UUIDGenerator, Types} = require("graphdb-utils");
 
 // ID Generator for creating new instances
 const idGenerator = new MongoDBIdGenerator("mongodb://127.0.0.1:27017/gdb-utils");
+// Or using UUID instead of counter
+// const idGenerator = new UUIDGenerator();
 
 // This determines the prefixes.
 // For example, `ic:Address` is same as `http://ontology.eil.utoronto.ca/tove/icontact#Address`
