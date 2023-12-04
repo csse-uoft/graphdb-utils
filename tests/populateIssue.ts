@@ -1,4 +1,4 @@
-import {createGraphDBModel, DeleteType, GraphDBModelConstructor, Types} from "../src";
+import {createGraphDBModel, DeleteType, GraphDBModelConstructor} from "../src";
 import {expect} from "chai";
 
 
@@ -15,7 +15,7 @@ export function PopulateIssue(repository: any) {
                 name: {type: String, internalKey: 'tove_org:hasName'},
                 description: {type: String, internalKey: 'cids:hasDescription'},
                 forOrganization: {type: () => GDBOrganizationModel, internalKey: 'cids:forOrganization'},
-                indicators: {type:　[() => GDBIndicatorModel], internalKey: 'cids:hasIndicator'},
+                indicators: {type:　[() => GDBIndicatorModel], internalKey: 'cids:hasIndicator', onDelete: DeleteType.CASCADE},
             }, {
                 rdfTypes: ['cids:Outcome'], name: 'outcome'
             });
@@ -71,6 +71,13 @@ export function PopulateIssue(repository: any) {
             expect(await GDBOutcomeModel.find({}, {populates: ['indicators']}));
             const result = await GDBOutcomeModel.find({});
             expect(result)
+        });
+
+        it('should delete', async () => {
+            const result2 = await GDBOutcomeModel.findAndDelete({});
+            expect(result2).length(1);
+            const result3 = await GDBOutcomeModel.find({});
+            expect(result3).length(0);
         });
     }
 }

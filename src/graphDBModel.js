@@ -3,7 +3,7 @@ const {GraphDBDocumentArray} = require("./graphDBDocumentArray");
 const {GraphDBDocument} = require('./graphDBDocument');
 const {
   Types, Comparison, stringToSpaces, valToGraphDBValue, graphDBValueToJsValue, objToPath, isModel, DeleteType, SPARQL,
-  extractId
+  extractId, getModel
 } = require('./helpers');
 const {getRepository} = require("./loader");
 
@@ -107,9 +107,10 @@ class GraphDBModel {
     const paths = [];
     for (const [key, option] of this.externalKey2Option.entries()) {
       const type = Array.isArray(option.type) ? option.type[0] : option.type;
-      if (isModel(type) && option.onDelete === DeleteType.CASCADE) {
+      const model = getModel(type);
+      if (model && option.onDelete === DeleteType.CASCADE) {
         paths.push(key);
-        for (const innerPath of type.getCascadePaths()) {
+        for (const innerPath of model.getCascadePaths()) {
           paths.push(`${key}.${innerPath}`);
         }
       }
