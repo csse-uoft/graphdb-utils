@@ -80,7 +80,7 @@ export async function initGraphDB(config: GraphDBUtilsConfig) {
     .setWriteTimeout(writeTimeout);
 
   if (config.username) {
-    clientConfig.useGdbTokenAuthentication(config.username, config.password);
+    clientConfig.useBasicAuthentication(config.username, config.password);
   }
 
   repository = new RDFRepositoryClient(clientConfig);
