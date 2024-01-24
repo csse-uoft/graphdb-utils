@@ -34,6 +34,11 @@ export const GraphDB = {
       .setResponseType(RDFMimeType.SPARQL_RESULTS_JSON)
       .setInference(inference);
 
+    if (Transaction.client) {
+      // https://github.com/Ontotext-AD/graphdb.js/issues/188
+      payload.setContentType(QueryContentType.SPARQL_QUERY)
+    }
+
     try {
       const stream = await repository.query(payload);
       await new Promise<void>((resolve, reject) => {
@@ -84,6 +89,11 @@ export const GraphDB = {
       .setResponseType(RDFMimeType.JSON_LD)
       .setInference(inference)
       // .setTimeout(5);
+
+    if (Transaction.client) {
+      // https://github.com/Ontotext-AD/graphdb.js/issues/188
+      payload.setContentType(QueryContentType.SPARQL_QUERY)
+    }
 
     try {
       const stream = await repository.query(payload);

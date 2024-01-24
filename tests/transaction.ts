@@ -22,6 +22,12 @@ export function transaction(repository: any) {
       const persons = await PersonModel.find({});
       expect(persons).length(1);
 
+      persons[0].name = 'hello2';
+      persons[0].save();
+      const persons4 = await PersonModel.find({name: 'hello2'});
+      expect(persons4).length(1);
+
+
       const persons3 = await PersonModel.find({}, {ignoreTransaction: true});
       expect(persons3).length(0);
 

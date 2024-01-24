@@ -5,18 +5,6 @@ const {SparqlJsonResultParser, JsonLDParser} = require('graphdb').parser;
 
 export {TransactionIsolationLevel};
 
-// Fix https://github.com/Ontotext-AD/graphdb.js/issues/188
-TransactionalRepositoryClient.prototype.query = function (payload: any) {
-  const serviceRequest = this.queryService.query(payload);
-  serviceRequest.getHttpRequestBuilder().setData(payload.payload.query)
-  serviceRequest.getHttpRequestBuilder().setHeaders({
-    ...serviceRequest.getHttpRequestBuilder().getHeaders(),
-    'Content-Type': 'application/sparql-query'
-  })
-  this.decorateServiceRequest(serviceRequest, 'QUERY');
-  return serviceRequest.execute();
-}
-
 export class Transaction {
   static client: TransactionalRepositoryClient | undefined;
   static TransactionIsolationLevel = TransactionIsolationLevel;
