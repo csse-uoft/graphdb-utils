@@ -1,3 +1,4 @@
+import "./cleanup";
 import {addNamespace, namespaces} from "../namespaces";
 import {createRepository} from "./utils";
 import {IDGenerator} from "../idGenerator/base";

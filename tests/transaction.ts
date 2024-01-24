@@ -1,6 +1,5 @@
 import {createGraphDBModel, DeleteType, GraphDBModelConstructor, Transaction, TransactionIsolationLevel} from "../src";
 import {expect} from "chai";
-import {sleep} from "../src/utils";
 
 export function transaction(repository: any) {
   return async function () {

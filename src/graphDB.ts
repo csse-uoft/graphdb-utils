@@ -53,7 +53,7 @@ export const GraphDB = {
     } catch (e: any) {
       if (e.response.data.on)
         e.response.data = await streamToString(e.response.data);
-      throw new GraphDBError('sendSelectQuery', e);
+      throw new GraphDBError('sendSelectQuery' + (Transaction.client ? '(Transaction)' : ''), e);
     }
   },
 
@@ -72,7 +72,7 @@ export const GraphDB = {
       await repository.update(payload);
     } catch (e: any) {
       // Rewrap to a more meaning error
-      throw new GraphDBError('sendUpdateQuery', e);
+      throw new GraphDBError('sendUpdateQuery' + (Transaction.client ? '(Transaction)' : ''), e);
     }
     console.log(`---------- ${Date.now() - time} ms -----------`);
   },
@@ -88,7 +88,7 @@ export const GraphDB = {
       .setQueryType(QueryType.CONSTRUCT)
       .setResponseType(RDFMimeType.JSON_LD)
       .setInference(inference)
-      // .setTimeout(5);
+    // .setTimeout(5);
 
     if (Transaction.client) {
       // https://github.com/Ontotext-AD/graphdb.js/issues/188
@@ -109,7 +109,7 @@ export const GraphDB = {
     } catch (e: any) {
       if (e.response.data.on)
         e.response.data = await streamToString(e.response.data);
-      throw new GraphDBError('sendConstructQuery', e);
+      throw new GraphDBError('sendConstructQuery' + (Transaction.client ? '(Transaction)' : ''), e);
     }
     console.log(`---------- ${Date.now() - time} ms -----------`);
   },
