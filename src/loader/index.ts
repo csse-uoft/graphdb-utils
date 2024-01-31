@@ -49,8 +49,13 @@ export interface GraphDBUtilsConfig {
   debug?: boolean;
 }
 
+export let debug = true;
+
 
 export async function initGraphDB(config: GraphDBUtilsConfig) {
+  if (config.debug === false) {
+    debug = false;
+  }
   if (config.address.endsWith('/')) {
     config.address = config.address.slice(0, -1);
   }

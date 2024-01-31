@@ -1,4 +1,4 @@
-import {getRepository} from './loader';
+import {debug, getRepository} from './loader';
 import {SPARQL} from "./helpers";
 import {GraphDBError} from "./graphDBError";
 
@@ -61,7 +61,8 @@ export const GraphDB = {
     repository = repository || (Transaction.client ? Transaction.client : await getRepository());
 
     const time = Date.now();
-    console.log(`------ Update query: ------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
+    if (debug)
+      console.log(`------ Update query: ------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
     try {
       const payload = new UpdateQueryPayload()
         .setQuery(query)
@@ -74,14 +75,16 @@ export const GraphDB = {
       // Rewrap to a more meaning error
       throw new GraphDBError('sendUpdateQuery' + (Transaction.client ? '(Transaction)' : ''), e);
     }
-    console.log(`---------- ${Date.now() - time} ms -----------`);
+    if (debug)
+      console.log(`---------- ${Date.now() - time} ms -----------`);
   },
 
   sendConstructQuery: async (query: string, onData: onDataCb, inference = false, repository?: GDBRepository) => {
     repository = repository || (Transaction.client ? Transaction.client : await getRepository());
 
     const time = Date.now();
-    console.log(`------ Construct query: -------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
+    if (debug)
+      console.log(`------ Construct query: -------\n${query.replaceAll(/prefix .*\n/gi, '')}`);
 
     const payload = new GetQueryPayload()
       .setQuery(query)
@@ -111,7 +114,8 @@ export const GraphDB = {
         e.response.data = await streamToString(e.response.data);
       throw new GraphDBError('sendConstructQuery' + (Transaction.client ? '(Transaction)' : ''), e);
     }
-    console.log(`---------- ${Date.now() - time} ms -----------`);
+    if (debug)
+      console.log(`---------- ${Date.now() - time} ms -----------`);
   },
 
   getAllInstancesWithLabel: async (type: string, repository?: GDBRepository): Promise<{ [key: string]: string }> => {

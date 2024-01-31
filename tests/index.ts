@@ -48,7 +48,8 @@ describe("GraphDB", function () {
           namespaces,
           repositoryName: 'gdb-utils',
           username: process.env.GRAPHDB_USERNAME,
-          password: process.env.GRAPHDB_PASSWORD
+          password: process.env.GRAPHDB_PASSWORD,
+          debug: true
         });
         repository = result.repository;
       });
