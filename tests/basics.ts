@@ -204,6 +204,9 @@ export function basics(repository: any) {
       expect(organizations).length.gt(0);
       expect(organizations[0]).property('persons');
       expect(organizations[0].persons).length(2);
+
+      const organizations2 = await OrganizationModel.findOne({name: "do not exist"});
+      expect(organizations2).undefined;
     });
 
     it('should modify nested document by giving new list', async function () {
