@@ -20,6 +20,7 @@ import {emptyInstance} from "./emptyInstance";
 import {transaction} from "./transaction";
 import {usingBoolean} from "./usingBoolean";
 import {UUIDGenerator} from "../src/idGenerator/uuidGenerator";
+import {inference} from "./inference";
 
 dotenv.config({path: `${__dirname}/.env`});
 
@@ -68,6 +69,7 @@ describe("GraphDB", function () {
       describe('Empty instance', emptyInstance(repository))
       describe('Transactions', transaction(repository))
       describe('usingBoolean', usingBoolean(repository))
+      describe('inference', inference(repository))
     });
   }
 });
