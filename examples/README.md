@@ -139,7 +139,7 @@ const person = await PersonModel.findByUri("http://test/person/1");
 const persons = await PersonModel.find({}, {populates: ['adress']})
 
 // Return all persons that has the address in "Ontario"
-const persons = await PersonModel.find({address: {city: 'Ontario'}}, {populates: ['adress']})
+const persons = await PersonModel.find({address: {city: 'Ontario'}}, {populates: ['address']})
 
 // Get the URI of the first person in the result
 console.log(persons[0]._uri);
